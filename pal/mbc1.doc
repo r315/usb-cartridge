@@ -1,0 +1,225 @@
+
+*******************************************************************************
+                                     MBC1
+*******************************************************************************
+
+CUPL(WM)        5.0a Serial# MW-10400000
+Device          g16v8ms  Library DLIB-h-40-11
+Created         Sun Jun 02 19:09:47 2024
+Name            MBC1
+Partno          00
+Revision        01
+Date            20/08/2023
+Designer        Me
+Company         hrdesign
+Assembly        00
+Location        Lisboa
+
+===============================================================================
+                            Expanded Product Terms
+===============================================================================
+
+L0.d  =>
+    A13 & !A14 & !A15 & D0
+  # A15 & L0
+  # A14 & L0
+  # !A13 & L0
+
+L1.d  =>
+    A13 & !A14 & !A15 & D1
+  # A15 & L1
+  # A14 & L1
+  # !A13 & L1
+
+L2.d  =>
+    A13 & !A14 & !A15 & D2
+  # A15 & L2
+  # A14 & L2
+  # !A13 & L2
+
+L3.d  =>
+    A13 & !A14 & !A15 & D3
+  # A15 & L3
+  # A14 & L3
+  # !A13 & L3
+
+MA14 =>
+    A14 & !A15 & !L1 & !L2 & !L3
+  # A14 & !A15 & L0
+
+MA15 =>
+    A14 & !A15 & L1
+
+MA16 =>
+    A14 & !A15 & L2
+
+MA17 =>
+    A14 & !A15 & L3
+
+ben =>
+    A14 & !A15
+
+dsel =>
+    A13 & !A14 & !A15
+
+lsb =>
+    !L1 & !L2 & !L3
+  # L0
+
+MA14.oe  =>
+    1 
+
+MA15.oe  =>
+    1 
+
+MA16.oe  =>
+    1 
+
+MA17.oe  =>
+    1 
+
+
+===============================================================================
+                                 Symbol Table
+===============================================================================
+
+Pin Variable                                    Pterms   Max     Min    
+Pol   Name              Ext     Pin     Type     Used   Pterms  Level   
+--- --------            ---     ---     ----    ------  ------  -----   
+
+    A13                         4        V        -       -       -     
+    A14                         3        V        -       -       -     
+    A15                         2        V        -       -       -     
+    D0                          9        V        -       -       -     
+    D1                          8        V        -       -       -     
+    D2                          7        V        -       -       -     
+    D3                          6        V        -       -       -     
+    L0                          12       V        -       -       -     
+    L0                  d       12       X        4       8       1     
+    L1                          13       V        -       -       -     
+    L1                  d       13       X        4       8       1     
+    L2                          14       V        -       -       -     
+    L2                  d       14       X        4       8       1     
+    L3                          15       V        -       -       -     
+    L3                  d       15       X        4       8       1     
+    MA14                        16       V        2       7       1     
+    MA15                        17       V        1       7       1     
+    MA16                        18       V        1       7       1     
+    MA17                        19       V        1       7       1     
+    WR                          1        V        -       -       -     
+    ben                         0        I        1       -       -     
+    dsel                        0        I        1       -       -     
+    lsb                         0        I        2       -       -     
+    MA14                oe      16       D        1       1       0     
+    MA15                oe      17       D        1       1       0     
+    MA16                oe      18       D        1       1       0     
+    MA17                oe      19       D        1       1       0     
+
+
+LEGEND    D : default variable         F : field      G : group
+          I : intermediate variable    N : node       M : extended node
+          U : undefined                V : variable   X : extended variable
+          T : function
+
+
+===============================================================================
+                                   Fuse Plot
+===============================================================================
+
+Syn   02192 x Ac0   02193 - 
+
+Pin #19  02048  Pol -  02120  Ac1 - 
+ 00000 -------------------------------- 
+ 00032 -x--x-------------x------------- 
+ 00064 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00096 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00128 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00160 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00192 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00224 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #18  02049  Pol -  02121  Ac1 - 
+ 00256 -------------------------------- 
+ 00288 -x--x-----------------x--------- 
+ 00320 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00352 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00384 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00416 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00448 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00480 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #17  02050  Pol -  02122  Ac1 - 
+ 00512 -------------------------------- 
+ 00544 -x--x---------------------x----- 
+ 00576 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00608 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00640 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00672 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00704 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00736 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #16  02051  Pol -  02123  Ac1 - 
+ 00768 -------------------------------- 
+ 00800 -x--x--------------x---x---x---- 
+ 00832 -x--x-------------------------x- 
+ 00864 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00896 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00928 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00960 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 00992 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #15  02052  Pol -  02124  Ac1 x 
+ 01024 -x---x--x-------x--------------- 
+ 01056 x-----------------x------------- 
+ 01088 ----x-------------x------------- 
+ 01120 ---------x--------x------------- 
+ 01152 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01184 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01216 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01248 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #14  02053  Pol -  02125  Ac1 x 
+ 01280 -x---x--x-----------x----------- 
+ 01312 x---------------------x--------- 
+ 01344 ----x-----------------x--------- 
+ 01376 ---------x------------x--------- 
+ 01408 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01440 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01472 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01504 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #13  02054  Pol -  02126  Ac1 x 
+ 01536 -x---x--x---------------x------- 
+ 01568 x-------------------------x----- 
+ 01600 ----x---------------------x----- 
+ 01632 ---------x----------------x----- 
+ 01664 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01696 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01728 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01760 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+Pin #12  02055  Pol -  02127  Ac1 x 
+ 01792 -x---x--x-------------------x--- 
+ 01824 x-----------------------------x- 
+ 01856 ----x-------------------------x- 
+ 01888 ---------x--------------------x- 
+ 01920 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01952 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 01984 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+ 02016 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+
+
+LEGEND    X : fuse not blown 
+          - : fuse blown 
+
+===============================================================================
+                                 Chip Diagram
+===============================================================================
+
+                               ______________
+                              |     MBC1     |
+                       WR x---|1           20|---x Vcc                      
+                      A15 x---|2           19|---x MA17                     
+                      A14 x---|3           18|---x MA16                     
+                      A13 x---|4           17|---x MA15                     
+                          x---|5           16|---x MA14                     
+                       D3 x---|6           15|---x L3                       
+                       D2 x---|7           14|---x L2                       
+                       D1 x---|8           13|---x L1                       
+                       D0 x---|9           12|---x L0                       
+                      GND x---|10          11|---x                          
+                              |______________|
+

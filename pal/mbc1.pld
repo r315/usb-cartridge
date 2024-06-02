@@ -1,0 +1,94 @@
+Name       MBC1;
+Partno     00;
+Date       20/08/2023;
+Revision   01;
+Designer   Me;
+Company    hrdesign;
+Assembly   00;
+Location   Lisboa;
+Device     g16v8a;
+/* Device     v750c; */
+
+/* $define    EN_RAM */  /* Uncomment this symbol to enable ram, this limits rom to 128kB */
+
+/*
+Compile Command :
+    cupl -jxfu "C:\Tools\Wincupl\Shared\cupl.dl" mbc1.pld
+
+JED file for simulation:
+    cupl -m1lxfjnabe -u "C:\Tools\Wincupl\Shared\Atmel.dl" mbc1.pld
+
+
+Pin assignments (no ram)
+     _______  _______
+    |       \/       |
+WR  | 1            20| VCC
+A15 | 2            19| MA17
+A14 | 3            18| MA16
+A13 | 4            17| MA15
+    | 5            16| MA14
+D0  | 6            15| L3
+D1  | 7            14| L2
+D2  | 8            13| L1
+D3  | 9            12| L0
+GND | 10           11| OE
+    |________________|
+*/
+
+
+/* ************************** */
+/*      PIN declaration       */
+/* ************************** */
+PIN 1 = WR;               // input
+PIN [6..9] = [D3..0];     // input
+PIN [2..4] = [A15..A13];  // input
+$ifdef EN_RAM
+PIN 5 = CSi;                 // input
+PIN 15 = CSo;                // Output
+PIN [14..12] = [L2..L0];     // Output
+$else
+PIN [15..12] = [L3..L0];
+$endif
+PIN [19..16] = [MA17..MA14]; // Output
+
+/* ************************** */
+/*            Body            */
+/* ************************** */
+
+/* Mux selector */
+dsel = !A15 & !A14 & A13;
+
+/* Bank enable */
+ben = !A15 & A14;
+
+$ifdef EN_RAM
+csx = A15 & !A14 & A13;
+CSo  = CSi # !csx;
+lsb  = !(L2 # L1) # L0;
+MA14 = lsb & ben;
+MA15 = L1 & ben;
+MA16 = L2 & ben;
+MA17 = 'b'0;
+
+L0.d = (D0 & dsel) # (L0 & !dsel);
+L1.d = (D1 & dsel) # (L1 & !dsel);
+L2.d = (D2 & dsel) # (L2 & !dsel);
+
+$else
+/* Force bank 1 when bank 0 is selected */
+lsb  = !(L3 # L2 # L1) # L0;
+
+/* Latch bank index into L3..0 on WR rising edge*/
+L0.d = (D0 & dsel) # (L0 & !dsel);
+L1.d = (D1 & dsel) # (L1 & !dsel);
+L2.d = (D2 & dsel) # (L2 & !dsel);
+L3.d = (D3 & dsel) # (L3 & !dsel);
+
+/* Enable bank output on A14*/
+MA14 = lsb & ben;
+MA15 = L1 & ben;
+MA16 = L2 & ben;
+MA17 = L3 & ben;
+$endif
+
+
