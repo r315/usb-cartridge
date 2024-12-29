@@ -52,7 +52,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
-
+#include "syscalls.h"
 
 /* Variables */
 //#undef errno
@@ -64,13 +64,36 @@ char **environ = __env;
 extern int __io_putchar(int ch) __attribute__((weak));
 extern int __io_getchar(void) __attribute__((weak));
 
-uint32_t serial_write(const uint8_t*, uint32_t);
-uint32_t serial_read(uint8_t*, uint32_t);
-uint32_t serial_available(void);
+static void default_stdout_init(void) { }
+static uint32_t default_stdout_available(void) { return 0;}
+static uint32_t default_stdout_write(const uint8_t *buf, uint32_t len) { return 0;}
+static uint32_t default_stdout_read(uint8_t *buf, uint32_t len) { return 0;}
+
+static stdout_ops_t stdout_ops_dummy = {
+    .init = default_stdout_init,
+    .available = default_stdout_available,
+    .read = default_stdout_read,
+    .write = default_stdout_write
+};
+
+static stdout_ops_t *stdout_ops = &stdout_ops_dummy;
 
 /* Functions */
 void initialise_monitor_handles()
 {
+}
+
+void redirect_stdout(stdout_ops_t *ops)
+{
+    if(ops){
+        stdout_ops = ops;
+        stdout_ops->init();
+    }
+}
+
+stdout_ops_t * get_stdout_redirect(void)
+{
+    return stdout_ops;
 }
 
 int _getpid(void)
@@ -90,27 +113,22 @@ void _exit (int status)
 	while (1) {}		/* Make sure we hang here */
 }
 
-int getavl(void)
-{
-    return serial_available();
-}
-
 __attribute__((weak)) int _read(int file, char *ptr, int len)
 {
     if(file == 0){
-        while(serial_available() == 0);
-        serial_read((uint8_t *)ptr, 1);
+        while(stdout_ops->available() == 0);
+        stdout_ops->read((uint8_t *)ptr, 1);
         return 1;
     }
 
-    return serial_read((uint8_t *)ptr, len);
+    return stdout_ops->read((uint8_t *)ptr, len);
 }
 
 // setvbuf(stdout, NULL, _IONBF, 0); // make stdio non-buffered, so that printf always calls __io_putchar
 __attribute__((weak)) int _write(int file, char *ptr, int len)
 {
     if(file == 1){
-        return serial_write((uint8_t *)ptr, len);
+        return stdout_ops->write((uint8_t *)ptr, len);
     }
 	return 0;
 }

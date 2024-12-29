@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include "syscalls.h"
 
 #define CLI_LINE_MAX_LEN    64
 #define CLI_HISTORY_SIZE    4
@@ -25,7 +26,7 @@ typedef enum cli_result_e
 
 typedef int (*cli_func) (int argc, char **argv);
 
-typedef struct cli_command_s 
+typedef struct cli_command_s
 {
    const char *name;
    cli_func exec;
@@ -48,7 +49,8 @@ int CLI_Commands(void);
 int CLI_History(void);
 int CLI_Run(void *);
 void CLI_Clear(void);
-
+uint8_t *CLI_GetLine(void);
+void CLI_Prompt (void);
 uint8_t CLI_Ia2i(char *str, int32_t *value);
 uint8_t CLI_Ha2i(char *str, uint32_t *value);
 

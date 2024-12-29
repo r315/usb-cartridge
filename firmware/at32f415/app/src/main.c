@@ -51,7 +51,7 @@ const flash_t *pfls;
 
 static void printBuf(const uint8_t *buf, uint32_t len){
     for(int i = 0; i < len; i ++){
-        if( (i & 15) == 0) 
+        if( (i & 15) == 0)
             printf("\n%02X: ", i & 0xF0);
         printf("%02X ", buf[i]);
     }
@@ -68,7 +68,7 @@ static void printGameTitle(const uint8_t* title)
 
     putchar('\n');
 }
-  
+
 static void printGameHeader(const uint8_t* header)
 {
     // Dump logo
@@ -91,9 +91,9 @@ static void printGameHeader(const uint8_t* header)
 FRESULT getDiskSize(TCHAR *path, disksize_t *disk_size)
 {
 	FATFS *pfs;
-    FRESULT res;	
-	DWORD fre_clust;    
-	
+    FRESULT res;
+	DWORD fre_clust;
+
 	res = f_getfree(path, &fre_clust, &pfs);
 
 	if(res == FR_OK){
@@ -112,7 +112,7 @@ FRESULT mount(TCHAR *path, uint8_t m)
     if(m)
     {
         if(fs){
-            printf("FS already mounted\n"); 
+            printf("FS already mounted\n");
             return FR_OK;
         }
 
@@ -157,21 +157,21 @@ static int readBlockFromFile(uint8_t *data, uint16_t len, const char *filename, 
     FIL fil;
     FRESULT fr;
     UINT br = 0;
-    
+
     if(!fs){
         printf("No fs mounted\n");
         return -FR_NO_FILESYSTEM;
     }
 
     fr = f_open(&fil, filename, FA_READ);
-    
+
     if(fr){
         printf("Error open: %d\n", fr);
         return -(int)fr;
     }
 
     fr = f_lseek(&fil, offset);
-    
+
     if(fr){
         printf("Error seeking: %d", fr);
         goto err;
@@ -198,7 +198,7 @@ static void selectFlashSPI(void){
 static void selectFlashNOR(void){
     norflash_cfgPins();
     flashnor_init();
-    pfls = flashnor_get();  
+    pfls = flashnor_get();
 }
 
 static int listCmd(int argc, char **argv)
@@ -208,7 +208,7 @@ static int listCmd(int argc, char **argv)
     uint32_t totalFiles = 0;
     uint32_t totalDirs = 0;
     DIR dir;
-    
+
     res = f_opendir(&dir, "/");
 
     if(res != FR_OK) {
@@ -217,13 +217,13 @@ static int listCmd(int argc, char **argv)
     }
 
     printf("--------\r\nRoot directory:\r\n");
-    
+
     for(;;) {
         res = f_readdir(&dir, &fileInfo);
         if((res != FR_OK) || (fileInfo.fname[0] == '\0')) {
             break;
         }
-        
+
         if(fileInfo.fattrib & AM_DIR) {
             printf("  DIR  %s\r\n", fileInfo.fname);
             totalDirs++;
@@ -263,12 +263,13 @@ static int flashCmd(int argc, char **argv)
 
     if(argc < 2){
         printf("usage: flash <select|init|info|erase>\n");
+        printf("\tselect <nor|spi>\n");
         return CLI_OK_LF;
     }
 
     if(!strcmp(argv[1], "select")){
         if(!strcmp(argv[2], "nor")){
-            selectFlashNOR();      
+            selectFlashNOR();
         }else{
            selectFlashSPI();
         }
@@ -315,18 +316,18 @@ static int flashCmd(int argc, char **argv)
         }
     }
 
-    if(!strcmp(argv[1], "write")) {        
+    if(!strcmp(argv[1], "write")) {
         pfls->write((const uint8_t*)"This is test data", 0 , 18);
         return CLI_OK_LF;
     }
-    
+
     if(!strcmp(argv[1], "erase")) {
         int32_t sector;
 
         if(argc == 2){
             res = pfls->erase(FLASH_CHIP_ERASE);
         }else{
-            CLI_Ia2i(argv[2], &sector);        
+            CLI_Ia2i(argv[2], &sector);
             res = pfls->erase(sector);
         }
 
@@ -387,32 +388,32 @@ static int romCmd(int argc, char **argv)
         uint32_t addr = 0;
         uint32_t progress = 0;
         uint8_t fail = 0;
-        
+
         if(!block){
             printf("Fail allocation\n");
             return CLI_OK;
         }
 
         spiflash_cfgPins();
-        
+
         if(!fs)
             mount("0:", 1);
-        
+
         int res = readBlockFromFile(block, PROG_BLOCK_SIZE, argv[2], addr);
-        
+
         if(res <= 0){
             free(block);
             return CLI_BAD_PARAM;
         }
 
         printGameHeader(block + GAME_HEADER_ADDR);
-        
+
         selectFlashNOR();
 
         printf("\nErasing..\n");
         printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
-        
-        while(1){            
+
+        while(1){
             if(res > 0){
                 norflash_cfgPins();
 
@@ -434,26 +435,26 @@ static int romCmd(int argc, char **argv)
                 }
 
                 addr += PROG_BLOCK_SIZE;
-                
+
                 if((progress & 0x1f) == 0){
-                    putchar('\n');    
+                    putchar('\n');
                 }
 
                 putchar('#');
                 progress++;
 
             }else{
-                printf("\nDone\n");                
+                printf("\nDone\n");
                 break;
             }
-            
+
             spiflash_cfgPins();
             res = readBlockFromFile(block, PROG_BLOCK_SIZE, argv[2], addr);
         }
 
         free(block);
         return CLI_OK;
-    }   
+    }
 
     if(!strcmp(argv[1], "bank")) {
         uint32_t bank;
@@ -468,14 +469,14 @@ static int romCmd(int argc, char **argv)
     if(!strcmp(argv[1], "read")){
         uint32_t addr;
         uint32_t len;
-        
+
         CLI_Ha2i(argv[2], &addr);
         CLI_Ia2i(argv[3], (int32_t*)&len);
-        
+
         if(addr < pfls->size && len < 512){
             uint8_t *buf = (uint8_t*)malloc(len);
             if(buf){
-                rom_read((uint8_t*)buf, addr, len);        
+                rom_read((uint8_t*)buf, addr, len);
                 printBuf((const uint8_t*)buf, len);
                 free(buf);
                 return CLI_OK_LF;
@@ -484,8 +485,8 @@ static int romCmd(int argc, char **argv)
     }
 
     if(!strcmp(argv[1], "readb")){
-        uint32_t addr;       
-        
+        uint32_t addr;
+
         CLI_Ha2i(argv[2], &addr);
         if(addr < pfls->size){
             uint8_t data = rom_readbyte(addr);
@@ -531,18 +532,18 @@ int main(void)
     if(!inserted){
         connectUSB();
     }
-     
+
 	while(1){
         if(inserted){
             if(isInserted()){
                 LED1_OFF;
                 delay_ms(100);
             }else{
-                connectUSB();               
+                connectUSB();
                 inserted = 0;
             }
         }else{
-            if(isInserted()){                
+            if(isInserted()){
                 disconnectUSB();
                 inserted = 1;
             }else{

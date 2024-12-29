@@ -1,10 +1,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <assert.h>
+#include <stdlib.h>
 #include "cli_simple.h"
 
+#if ENABLE_CLI_COLOR
 #define VT100_BOLD   "\e[1m"
 #define VT100_NORMAL "\e[m"
+#else
+#define VT100_BOLD
+#define VT100_NORMAL
+#endif
 
 static uint8_t CliLineBuffer[CLI_LINE_MAX_LEN];
 static uint16_t CliLineLen;
@@ -17,8 +24,26 @@ static cli_history_t History;
 static const char *Prompt;
 static const cli_command_t *CliCommands;
 
+static uint32_t (*available)(void);
+static uint32_t (*readch)(uint8_t*, uint32_t);
 
-extern int getavl (void);
+
+// =============================================================================
+// CLI_GetLine
+// =============================================================================
+/*!
+ *
+ * Get internal line buffer.
+ * This can be useful to bypass ReadLine if a given character is pressed
+ *
+ * \return       - uint8_t pointer to internal line buffer
+ *
+ */
+// =============================================================================
+uint8_t *CLI_GetLine(void)
+{
+    return CliLineBuffer;
+}
 
 // =============================================================================
 // CLI_SkipSpaces
@@ -26,18 +51,25 @@ extern int getavl (void);
 /*!
  *
  * Skips spaces until next character of a string.
- * 
+ *
  * \param Str    - Pointer to some string
  * \param MaxLen - Input string max length
- * 
- * \return       - uint8_t pointer to next character on string 
+ *
+ * \return       - uint8_t pointer to next character on string
  *                 or begin of string if no spaces were found
  *
  */
 // =============================================================================
 static uint8_t * CLI_SkipSpaces (uint8_t *Str, uint32_t MaxLen)
 {
-   uint8_t *Start = Str;
+   uint8_t *Start;
+
+   if(!Str)
+   {
+      return NULL;
+   }
+
+   Start = Str;
 
    while (*Start == ' ' || *Start == '\t')
    {
@@ -58,15 +90,19 @@ static uint8_t * CLI_SkipSpaces (uint8_t *Str, uint32_t MaxLen)
 /*!
  *
  * Searches the command on the command list
- * 
+ *
  * \param - Buffer  String containing command name
- * 
+ *
  * \return - cli_command_t*  Pointer to command structure
  *
  */
 // =============================================================================
 static cli_command_t * CLI_GetCommand(uint8_t *Buffer)
 {
+   if(!Buffer){
+      return NULL;
+   }
+
    for (uint8_t i = 0; i < CliCommandsCount; i++)
    {
       if(!strcmp(CliCommands[i].name, (const char*) Buffer))
@@ -84,10 +120,10 @@ static cli_command_t * CLI_GetCommand(uint8_t *Buffer)
 /*!
  *
  * Splits a command line string into arguments
- * 
+ *
  * \param[in] - Buffer  String containing command and arguments
- * \param[out] - Argv    Arguments output array 
- * 
+ * \param[out] - Argv    Arguments output array
+ *
  * \return - Number of arguments
  *
  */
@@ -96,7 +132,10 @@ static uint32_t CLI_GetArguments(uint8_t *Buffer, uint8_t **Argv)
 {
     uint8_t *Start, *End, ArgvIndex;
 
-    ArgvIndex = 0;
+    if(!Buffer)
+    {
+        return 0;
+    }
 
     // Skip any spaces before command
 
@@ -108,7 +147,9 @@ static uint32_t CLI_GetArguments(uint8_t *Buffer, uint8_t **Argv)
     {
         return 0;
     }
-   
+
+    ArgvIndex = 0;
+
     Argv[ArgvIndex++] = End = Start;
 
     do{
@@ -120,7 +161,7 @@ static uint32_t CLI_GetArguments(uint8_t *Buffer, uint8_t **Argv)
             Argv[ArgvIndex++] = End;
             continue;
         }
-     
+
         End++;
     }while(*End != '\0' && End != Start + CLI_LINE_MAX_LEN);
 
@@ -133,20 +174,24 @@ static uint32_t CLI_GetArguments(uint8_t *Buffer, uint8_t **Argv)
 /*!
  *
  * Replace current line on console
- * 
+ *
  * \param - new_line    Replacing line
- * 
+ *
  * \return - Replacing line length
  *
  */
 // =============================================================================
 static void CLI_ReplaceLine(uint8_t *new_line) {
-	int new_line_len;
+    int new_line_len;
+
+    if(!new_line){
+        return;
+    }
 
     new_line_len = strlen((const char*)new_line);
 
     if(new_line_len > 0 && new_line_len < CLI_LINE_MAX_LEN){
-    	memcpy(CliLineBuffer, new_line, new_line_len);
+        memcpy(CliLineBuffer, new_line, new_line_len);
 
       if(CliEdit){
          printf("\e[%uC", CliEdit);
@@ -158,7 +203,7 @@ static void CLI_ReplaceLine(uint8_t *new_line) {
       }
 
       CliLineLen = new_line_len;
-        
+
       printf("%s", new_line);
     }
 }
@@ -169,14 +214,14 @@ static void CLI_ReplaceLine(uint8_t *new_line) {
 /*!
  *
  * Prints cli prompt
- * 
+ *
  * \param - None
- * 
+ *
  * \return - void
  *
  */
 // =============================================================================
-static void CLI_Prompt (void)
+void CLI_Prompt (void)
 {
    printf(
       VT100_BOLD
@@ -191,26 +236,30 @@ static void CLI_Prompt (void)
 /*!
  *
  * Prints registered commands alias
- * 
- * 
+ *
+ *
  * \param - void
- * 
- * 
+ *
+ *
  * \return - cli_result_t
  *
  */
 // =============================================================================
 static void CLI_HistoryInit(cli_history_t *Hist)
 {
-   uint16_t Index;
+    uint16_t Index;
 
-   Hist->head = 0;
-   Hist->index = 0;
-   Hist->size = 0;
+    if(!Hist){
+        return;
+    }
 
-   for(Index = 0; Index < CLI_HISTORY_SIZE; Index++){
-      memset(Hist->history[Index], '\0', CLI_LINE_MAX_LEN);
-   }
+    Hist->head = 0;
+    Hist->index = 0;
+    Hist->size = 0;
+
+    for(Index = 0; Index < CLI_HISTORY_SIZE; Index++){
+        memset(Hist->history[Index], '\0', CLI_LINE_MAX_LEN);
+    }
 }
 
 // =============================================================================
@@ -219,27 +268,30 @@ static void CLI_HistoryInit(cli_history_t *Hist)
 /*!
  *
  * Prints registered history list
- * 
- * 
+ *
+ *
  * \param - Hist    history structure
- * 
- * 
+ *
+ *
  * \return - void
  *
  */
 // =============================================================================
 static void CLI_HistoryDump(cli_history_t *Hist) {
-   uint16_t Index;
+    uint16_t Index;
 
-	for (Index = 0; Index < CLI_HISTORY_SIZE; Index++)
-	{
-		printf("\n%c %u %s", (Index == Hist->head) ? '>' : ' ', Index, Hist->history[Index]);
-	}
+    if(!Hist){
+        return;
+    }
 
-	putchar('\n');
+    for (Index = 0; Index < CLI_HISTORY_SIZE; Index++)
+    {
+        printf("\n%c %u %s", (Index == Hist->head) ? '>' : ' ', Index, Hist->history[Index]);
+    }
+
+    putchar('\n');
     putchar('\n');
 }
-
 
 // =============================================================================
 // CLI_HistoryAdd
@@ -247,42 +299,46 @@ static void CLI_HistoryDump(cli_history_t *Hist) {
 /*!
  *
  * Adds entry to history
- * 
- * 
+ *
+ *
  * \param - Hist    history structure
  * \param - line    Line to be added
- * 
+ *
  * \return - void
  *
  */
 // =============================================================================
 static void CLI_HistoryAdd(cli_history_t *Hist, uint8_t *line)
 {
-   uint16_t Index;
+    uint16_t Index;
 
-   if (*line != '\n' && *line != '\r' && *line != '\0') {
-		
-      for(Index = 0; Index < CLI_LINE_MAX_LEN - 1; Index++)
-      {
-         if(line[Index] == '\0')
-         {
-            break;
-         }
+    if(!Hist || !line){
+        return;
+    }
 
-         Hist->history[Hist->head][Index] = line[Index];
-      }
+    if (*line != '\n' && *line != '\r' && *line != '\0') {
 
-      Hist->history[Hist->head][Index] = '\0';
+        for(Index = 0; Index < CLI_LINE_MAX_LEN - 1; Index++)
+        {
+            if(line[Index] == '\0')
+            {
+                break;
+            }
 
-      Hist->head = (Hist->head + 1) % CLI_HISTORY_SIZE;
-	
-	  Hist->index = Hist->head;
+            Hist->history[Hist->head][Index] = line[Index];
+        }
 
-	  if (Hist->size < CLI_HISTORY_SIZE) 
-      {
-         Hist->size++;
-      }
-   }
+        Hist->history[Hist->head][Index] = '\0';
+
+        Hist->head = (Hist->head + 1) % CLI_HISTORY_SIZE;
+
+        Hist->index = Hist->head;
+
+        if (Hist->size < CLI_HISTORY_SIZE)
+        {
+            Hist->size++;
+        }
+    }
 }
 
 // =============================================================================
@@ -291,57 +347,61 @@ static void CLI_HistoryAdd(cli_history_t *Hist, uint8_t *line)
 /*!
  *
  * Returns history entry relative to current one
- * 
- * 
+ *
+ *
  * \param - Hist    history structure
  * \param - Dir     Direction -1 previous entry, 1 next entry, 0 current entry
- * 
+ *
  * \return - void   selected entry
  *
  */
 // =============================================================================
 static uint8_t *CLI_HistoryGet(cli_history_t *Hist, int8_t Dir)
 {
-   uint16_t CurIndex;
-   
-   CurIndex = Hist->index;
-   
-   if(Dir == -1)
-   {
-      if (Hist->size == CLI_HISTORY_SIZE) 
-      {
-         // History is full, wrap arround is allowed
-         if (--CurIndex > CLI_HISTORY_SIZE)
-         {
-            CurIndex = CLI_HISTORY_SIZE - 1;
-         }
+    uint16_t CurIndex;
 
-         // Stop going back if we are back on current entry
-         if (CurIndex != Hist->head) 
-         {
-            Hist->index = CurIndex;
-         }
-      }
-      else if(Hist->index > 0)
-      {
-         Hist->index--;
-      }	   
-   }
-   else if (Dir == 1)
-   {
-      if (CurIndex != Hist->head) {
-         CurIndex = (CurIndex + 1) % CLI_HISTORY_SIZE;
-      }
-      
-      if(CurIndex == Hist->head){
-         // Clear current line to avoid duplicating history navigation
-         memset(Hist->history[CurIndex], '\0', CLI_LINE_MAX_LEN);
-      }
+    if(!Hist){
+        return NULL;
+    }
 
-      Hist->index = CurIndex;
-   }
+    CurIndex = Hist->index;
 
-   return Hist->history[Hist->index];
+    if(Dir == -1)
+    {
+        if (Hist->size == CLI_HISTORY_SIZE)
+        {
+            // History is full, wrap arround is allowed
+            if (--CurIndex > CLI_HISTORY_SIZE)
+            {
+                CurIndex = CLI_HISTORY_SIZE - 1;
+            }
+
+            // Stop going back if we are back on current entry
+            if (CurIndex != Hist->head)
+            {
+                Hist->index = CurIndex;
+            }
+        }
+        else if(Hist->index > 0)
+        {
+            Hist->index--;
+        }
+    }
+    else if (Dir == 1)
+    {
+        if (CurIndex != Hist->head) {
+            CurIndex = (CurIndex + 1) % CLI_HISTORY_SIZE;
+        }
+
+        if(CurIndex == Hist->head){
+            // Clear current line to avoid duplicating history navigation
+            memset(Hist->history[CurIndex], '\0', CLI_LINE_MAX_LEN);
+        }
+
+        Hist->index = CurIndex;
+    }
+
+    return Hist->history[Hist->index];
 }
 
 // =============================================================================
@@ -350,11 +410,11 @@ static uint8_t *CLI_HistoryGet(cli_history_t *Hist, int8_t Dir)
 /*!
  *
  * Wrapper for CLI_HistoryDump
- * 
- * 
+ *
+ *
  * \param - void
- * 
- * 
+ *
+ *
  * \return - cli_result_t
  *
  */
@@ -371,36 +431,28 @@ int CLI_History(void)
 /*!
  *
  * Initialize command line interface
- * 
- * 
- * \param - Prompt 
- * 
+ *
+ *
+ * \param - Prompt
+ *
  * \return - void
  *
  */
 // =============================================================================
 void CLI_Init (const char *prompt)
 {
-   if (prompt == NULL)
-   {
-      return;
-   }
-
    memset (CliLineBuffer, 0x0, sizeof (CliLineBuffer));
    CliLineLen = 0;
    CliEdit = 0;
 
-   Prompt = prompt;
+   available = get_stdout_redirect()->available;
+   readch = get_stdout_redirect()->read;
 
-   setvbuf(stdout, NULL, _IONBF, 0); // make stdout non-buffered, so that printf always calls __io_putchar
-   
+   Prompt = (prompt == NULL) ? "cli>" : prompt;
+
+   setvbuf(stdout, NULL, _IONBF, 0); // make stdout non-buffered
+
    CLI_HistoryInit(&History);
-
-   CLI_Clear();
-
-   printf("\e[?25h\r");
-   
-   CLI_Prompt ();
 }
 
 // =============================================================================
@@ -409,11 +461,11 @@ void CLI_Init (const char *prompt)
 /*!
  *
  * Registers commands that can be executed by cli
- * 
- * 
- * \param - Commands    List of commands 
+ *
+ *
+ * \param - Commands    List of commands
  * \param - Count       Number of commands in list
- * 
+ *
  * \return - void
  *
  */
@@ -433,11 +485,11 @@ void CLI_RegisterCommand (const cli_command_t *Commands, uint8_t Count)
 /*!
  *
  * Prints registered commands alias
- * 
- * 
+ *
+ *
  * \param - void
- * 
- * 
+ *
+ *
  * \return - cli_result_t
  *
  */
@@ -459,18 +511,18 @@ int CLI_Commands (void)
 // =============================================================================
 /*!
  *
- * command line command by spliting it into arguments and 
+ * command line command by spliting it into arguments and
  * executing the corresponding command
- * 
+ *
  * \param[in] line - pointer to command line,
- * 
+ *
  * \return - cli_result_t
  *
  */
 // =============================================================================
 cli_result_t CLI_ProcessLine (uint8_t *line)
 {
-   cli_result_t Res = CLI_CMD_NOT_FOUND;
+   cli_result_t Res;
 
    CliArgc = CLI_GetArguments(line, CliArgv);
 
@@ -480,15 +532,15 @@ cli_result_t CLI_ProcessLine (uint8_t *line)
       const cli_command_t *Cmd = CLI_GetCommand(CliArgv[0]);
       if(Cmd != NULL){
          Res = Cmd->exec(CliArgc, (char**)CliArgv);
+      }else{
+         // Distinguish invalid command and empty line
+         Res = (CliArgc) ? CLI_CMD_NOT_FOUND : CLI_OK;
       }
    }
 
    switch(Res){
       case CLI_CMD_NOT_FOUND:
-         if(CliLineLen)
-         {
-            puts("command not found");
-         }
+         puts("command not found");
          break;
 
       case CLI_BAD_PARAM:
@@ -502,17 +554,10 @@ cli_result_t CLI_ProcessLine (uint8_t *line)
       case CLI_OK_LF:
          putchar('\n');
          break;
-      
+
       default:
          break;
    }
-
-   // Parse splits initial line, it must be cleared in all its length
-   memset (line, '\0', CLI_LINE_MAX_LEN);
-   CliLineLen = 0;
-   CliEdit = 0;
-
-   CLI_Prompt ();
 
    return Res;
 }
@@ -523,9 +568,9 @@ cli_result_t CLI_ProcessLine (uint8_t *line)
 /*!
  *
  * Handle command line entered by user and adds it to history
- * 
+ *
  * \param - None
- * 
+ *
  * \return - cli_result_t
  *
  */
@@ -534,7 +579,20 @@ cli_result_t CLI_HandleLine (void)
 {
    CLI_HistoryAdd(&History, CliLineBuffer);
 
-   return CLI_ProcessLine(CliLineBuffer);
+   cli_result_t Res = CLI_ProcessLine(CliLineBuffer);
+
+   // Parse splits initial line, it must be cleared in all its length
+   memset (CliLineBuffer, '\0', CLI_LINE_MAX_LEN);
+   CliLineLen = 0;
+   CliEdit = 0;
+
+   // Also clear parameters pointers
+   memset (CliArgv, '\0', sizeof(CliArgv));
+   CliArgc = 0;
+
+   CLI_Prompt ();
+
+   return Res;
 }
 
 // =============================================================================
@@ -543,10 +601,10 @@ cli_result_t CLI_HandleLine (void)
 /*!
  *
  * Read input line by user, this call is not blocking
- * 
- * 
+ *
+ *
  * \param - void
- * 
+ *
  * \return - cli_result_t
  *
  */
@@ -555,9 +613,11 @@ cli_result_t CLI_ReadLine (void)
 {
    static uint8_t EscSeq = 0;
 
-   if (getavl ())
+   if (available())
    {
-      uint8_t Data = getchar ();
+      uint8_t Data;
+
+      readch(&Data, 1);
 
       if (EscSeq == 1)
       {
@@ -574,15 +634,15 @@ cli_result_t CLI_ReadLine (void)
          {
             case 'A':
                //puts ("UP");
-               CLI_ReplaceLine(CLI_HistoryGet(&History, -1));               
+               CLI_ReplaceLine(CLI_HistoryGet(&History, -1));
                break;
 
             case 'B':
                //puts ("DOWN");
-               CLI_ReplaceLine(CLI_HistoryGet(&History, 1));               
+               CLI_ReplaceLine(CLI_HistoryGet(&History, 1));
                break;
 
-            case 'C':            
+            case 'C':
                //puts ("RIGTH");
                if(CliEdit > 0){
                   printf("\e[1C");
@@ -622,7 +682,7 @@ cli_result_t CLI_ReadLine (void)
                if(!CliEdit){
                   putchar('\b');
                   putchar(' ');
-                  putchar('\b');                  
+                  putchar('\b');
                }else{
                   uint8_t offset = CliLineLen - CliEdit;
 
@@ -642,7 +702,7 @@ cli_result_t CLI_ReadLine (void)
 
                   // Erase last character
                   putchar(' ');
-                  // Move cursor back to edit position                  
+                  // Move cursor back to edit position
                   printf("\e[%uD", CliEdit + 1);
                }
                CliLineLen--;
@@ -650,6 +710,7 @@ cli_result_t CLI_ReadLine (void)
             break;
          }
 
+         case '\n':
          case '\r':
          {
             CliLineBuffer[CliLineLen] = '\0';
@@ -661,9 +722,12 @@ cli_result_t CLI_ReadLine (void)
          {
             if (CliLineLen < sizeof (CliLineBuffer))
             {
-               if(CliEdit){
+               if(!CliEdit){
+                  CliLineBuffer[CliLineLen++] = Data;
+                  putchar (Data);
+               }else{
                   uint8_t offset = CliLineLen - CliEdit;
-                 
+
                   // Move and print remaning string in buffer
                   for(uint8_t i = 0; i < CliEdit; i++){
                      CliLineBuffer[CliLineLen - i] = CliLineBuffer[CliLineLen - 1 - i];
@@ -674,15 +738,12 @@ cli_result_t CLI_ReadLine (void)
                   // Print remanig string with new character already inserted
                   for(uint8_t i = 0; i < CliEdit + 1; i++){
                      putchar(CliLineBuffer[offset + i]);
-                  }                  
-                  
+                  }
+
                   // Move cursor back to edit position
                   printf("\e[%uD", CliEdit);
-                  
+
                   CliLineLen++;
-               }else{
-                  CliLineBuffer[CliLineLen++] = Data;
-                  putchar (Data);
                }
             }
             break;
@@ -698,9 +759,9 @@ cli_result_t CLI_ReadLine (void)
 /*!
  *
  * Continuously processes cli, this is intended to be used by a thread from OS
- * 
+ *
  * \param - Prt
- * 
+ *
  * \return - exit status
  *
  */
@@ -736,82 +797,86 @@ void CLI_Clear(void)
  * \return number of converted digits
  * */
 uint8_t CLI_Ia2i(char *str, int32_t *value) {
-	int val = 0;
-	char c = *str;
-	uint8_t s = 0;
+    int val = 0;
+    char c;
+    uint8_t s = 0;
 
-	if(str == NULL){
-		return 0;
-	}
+    if(str == NULL){
+        return 0;
+    }
 
     if(*str == '\0'){
         return 0;
     }
 
-	if (c == '-') {
-		s = (1 << 7); // Set signal flag
-		str++;
-		c = *str;
-	}
+    c = *str;
 
-	do{
-		if (c > '/' && c < ':') {
-			c -= '0';
-			val = val * 10 + c;
-			s++;
-		}
-		else {
-			return 0;
-		}
-		c = *(++str);
-	}while (c != ' ' && c != '\n' && c != '\r' && c != '\0');
-		
-	// check signal flag
-	*value = (s & (1 << 7)) ? -val : val;
+    if (c == '-') {
+        s = (1 << 7); // Set signal flag
+        str++;
+        c = *str;
+    }
 
-	return s & 0x7F;
+    do{
+        if (c > '/' && c < ':') {
+            c -= '0';
+            val = val * 10 + c;
+            s++;
+        }
+        else {
+            return 0;
+        }
+        c = *(++str);
+    }while (c != ' ' && c != '\n' && c != '\r' && c != '\0');
+
+    // check signal flag
+    *value = (s & (1 << 7)) ? -val : val;
+
+    return s & 0x7F;
 }
 
 
 /**
  * Try to parse a string representing a hex number to integer value
- * 
+ *
  * \param  str	pointer to input string
  * \param  value  pointer to output value
  * \return 1 if success, 0 if failed
  * */
 uint8_t CLI_Ha2i(char *str, uint32_t *value) {
-	uint32_t val = 0;
-	char c = *str;
+    uint32_t val = 0;
+    char c;
 
-	if(str == NULL){
-		return 0;
-	}
+    if(str == NULL){
+        return 0;
+    }
 
     if(*str == '\0'){
         return 0;
     }
 
-	do {
-		val <<= 4;
-		if (c > '`' && c < 'g') {
-			c -= 'W';
-		}
-		else if ((c > '@' && c < 'G')) {
-			c -= '7';
-		}
-		else if (c > '/' && c < ':') {
-			c -= '0';
-		}
-		else {
-			return 0;
-		}
+    c = *str;
 
-		val |= c;
-		c = *(++str);
+    do {
+        val <<= 4;
+        if (c > '`' && c < 'g') {
+            c -= 'W';
+        }
+        else if ((c > '@' && c < 'G')) {
+            c -= '7';
+        }
+        else if (c > '/' && c < ':') {
+            c -= '0';
+        }
+        else {
+            return 0;
+        }
 
-	} while (c != '\0' && c != ' ' && c != '\n' && c != '\r');
+        val |= c;
+        c = *(++str);
 
-	*value = val;
-	return 1;
+    } while (c != '\0' && c != ' ' && c != '\n' && c != '\r');
+
+    *value = val;
+    return 1;
 }

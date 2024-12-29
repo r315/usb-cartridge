@@ -83,9 +83,9 @@ Also an unformated usb drive should be detected, format it as FAT.
 
 Copy a rom file to that drive, the maximum rom size is 256kB, open a serial terminal and run commands:
 
-1. `*mount 1*` this command mounts volume inside microcontroller.
-1. `*list*`     list available files.
-1. `*rom program <romname>*` programs given rom file into flash.
+1. `mount 1` this command mounts volume inside microcontroller.
+1. `list`     list available files.
+1. `rom program <romname>` programs given rom file into flash.
 
 There are several other commands, typing *help* list all avaialble commands, typing some commands without parameters prints help of that command.
 Code can be also checked for more command information.

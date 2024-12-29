@@ -4,6 +4,7 @@
 #include "cdc_msc_desc.h"
 #include "usbd_int.h"
 #include "msc_diskio.h"
+#include "syscalls.h"
 
 #define ROM_ADDR_BANK_SELL      0x2000
 #define ROM_ADDR_BANK_SELH      0x4000
@@ -14,6 +15,14 @@ static uint8_t serial_buf[USBD_CDC_MSC_OUT_MAXPACKET_SIZE];
 static uint32_t serial_queued = 0;
 static uint8_t *serial_currentPos;
 
+static void serial_init(void){}
+
+static stdout_ops_t stdout_ops_serial = {
+    .init = serial_init,
+    .available = serial_available,
+    .read = serial_read,
+    .write = serial_write
+};
 
 void sw_reset(void){
     NVIC_SystemReset();
@@ -28,10 +37,12 @@ void board_init(void)
     cycle_count_init();
     nvic_priority_group_config(NVIC_PRIORITY_GROUP_4);
 
-    // HW revA requires A-1 low
+    // HW revA requires A-1 low (Correction made: PF7 -> Q15/A-1)
     crm_periph_clock_enable(CRM_GPIOF_PERIPH_CLOCK, TRUE);
-    GPIOF->cfglr = 0x24444444;
-    LSB_NOR_LOW;
+    GPIOF->cfglr = 0x24444444; // PF7 as output push-pull
+    LSB_NOR_LOW;    // Set pin A-1 to low
+
+    redirect_stdout(&stdout_ops_serial);
 }
 
 /**
@@ -61,7 +72,7 @@ void usb_gpio_config(void)
 /**
  * @brief puts usb gpio pins in reset state
  * (input float)
- * 
+ *
  */
 void usb_gpio_deinit(void)
 {
@@ -78,7 +89,7 @@ void usb_gpio_deinit(void)
  * @brief Configures usb peripheral,
  * usb gpio pins and make usb peripheral
  * ready to be plugged.
- * 
+ *
  */
 void usb_config(void)
 {
@@ -102,7 +113,7 @@ void usb_config(void)
     nvic_irq_enable(OTGFS1_IRQn, 1, 0);
 
     usb_gpio_config();
-    
+
     /* init usb */
     usbd_init(&otg_core_struct,
             USB_FULL_SPEED_CORE_ID,
@@ -114,10 +125,10 @@ void usb_config(void)
 }
 
 /**
- * @brief Issues a usb disconnect to 
+ * @brief Issues a usb disconnect to
  * usb peripheral disables interrupt
  * and de initialyses usb gpio pins
- * 
+ *
  */
 void usb_unplug(void)
 {
@@ -133,7 +144,7 @@ void usb_unplug(void)
 /**
  * @brief Initialyses spi flash memory
  * and if success initialyses usb peripheral
- * 
+ *
  */
 void connectUSB(void)
 {
@@ -144,7 +155,7 @@ void connectUSB(void)
 
 /**
  * @brief Discconnects usb and place all
- * gpio pins connected to nor flash in 
+ * gpio pins connected to nor flash in
  * input float state
  */
 void disconnectUSB(void)
@@ -155,10 +166,10 @@ void disconnectUSB(void)
 }
 
 /**
- * @brief Check if a connection between usb peripheral and 
+ * @brief Check if a connection between usb peripheral and
  * usb host is established
- * 
- * @return uint8_t 
+ *
+ * @return uint8_t
  */
 uint8_t usb_isConnected(void)
 {
@@ -178,10 +189,10 @@ void OTGFS1_IRQHandler(void)
 /**
  * @brief Reads data from serial in blocking
  * manner
- * 
- * @param data 
- * @param len 
- * @return uint32_t 
+ *
+ * @param data
+ * @param len
+ * @return uint32_t
  */
 uint32_t serial_read(uint8_t *data, uint32_t len)
 {
@@ -199,12 +210,12 @@ uint32_t serial_read(uint8_t *data, uint32_t len)
 
 /**
  * @brief Writes data to serial port.
- * not thread safe, do not call from 
+ * not thread safe, do not call from
  * interrupts
- * 
- * @param buf 
- * @param len 
- * @return uint32_t 
+ *
+ * @param buf
+ * @param len
+ * @return uint32_t
  */
 uint32_t serial_write(const uint8_t *buf, uint32_t len)
 {
@@ -220,8 +231,8 @@ uint32_t serial_write(const uint8_t *buf, uint32_t len)
 
 /**
  * @brief Checks if data serial data has been received
- * 
- * @return uint32_t 
+ *
+ * @return uint32_t
  */
 uint32_t serial_available(void)
 {
@@ -229,7 +240,7 @@ uint32_t serial_available(void)
         serial_queued = usb_vcp_get_rxdata(&otg_core_struct.dev, serial_buf);
         serial_currentPos = serial_buf;
     }
-    
+
     return serial_queued;
 }
 
@@ -237,7 +248,7 @@ uint32_t serial_available(void)
  * @brief Initialyses interrupt to
  *        disable all io pins connected to
  *        nor flash memory
- * 
+ *
  */
 void insertDetection_init(void)
 {
@@ -246,14 +257,14 @@ void insertDetection_init(void)
     IOMUX->exintc4_bit.exint15 = 0;    // Assing PA15 to EXINT15
     EXINT->polcfg1 = GPIO_PINS_15;     // Rising edge
     EXINT->inten = GPIO_PINS_15;       // Enable EXINT interrupt request
-    
+
     nvic_irq_enable(EXINT15_10_IRQn, 0, 0); // Highiest priority
 }
 
 /**
  * @brief Checks if card is inserted on device
- * 
- * @return uint8_t 
+ *
+ * @return uint8_t
  */
 uint8_t isInserted(void)
 {
@@ -261,9 +272,9 @@ uint8_t isInserted(void)
 }
 
 /**
- * @brief Interrupt handler that 
+ * @brief Interrupt handler that
  * disables all pins
- * 
+ *
  */
 void EXINT15_10_IRQHandler(void)
 {
@@ -279,8 +290,8 @@ void EXINT15_10_IRQHandler(void)
  * @brief Change bank for rom addresses 4000:7FFF
  *        Specification assigns 5 + 2 bits for bank selection
  *        however this hw only supports 4bits
- * 
- * @param bank 
+ *
+ * @param bank
  */
 void rom_setBank(uint8_t bank)
 {
@@ -298,9 +309,9 @@ void rom_setBank(uint8_t bank)
 
 /**
  * @brief Read a single byte from rom
- * 
- * @param address 
- * @return uint8_t 
+ *
+ * @param address
+ * @return uint8_t
  */
 uint8_t rom_readbyte(uint32_t address)
 {
@@ -333,12 +344,12 @@ uint8_t rom_readbyte(uint32_t address)
 
 /**
  * @brief Reads data from rom.
- * 
- * @param data 
- * @param address 
- * @param len 
- * 
- * @return flash_res_t 
+ *
+ * @param data
+ * @param address
+ * @param len
+ *
+ * @return flash_res_t
  */
 flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len)
 {
@@ -373,11 +384,11 @@ flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len)
 
 /**
  * @brief Programs a block of data int to a rom address
- * 
- * @param data 
- * @param addr 
- * @param len 
- * @return flash_res_t 
+ *
+ * @param data
+ * @param addr
+ * @param len
+ * @return flash_res_t
  */
 flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
 {
@@ -387,11 +398,11 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
     RD_NOR_HIGH;
     LSB_NOR_LOW;
 
-    while(len--){        
+    while(len--){
         if(addr < 0x4000){
             rom_setBank(0);
             romaddr = addr;
-        }else{            
+        }else{
             rom_setBank(addr >> 14);
             romaddr = (0x4000 | addr) & 0x7FFF;
         }
@@ -410,7 +421,7 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
         delay_us(10);
         WR_NOR_HIGH;
         delay_us(10);
-        
+
         if(norflash_polling(*data) != FLASH_OK){
             res = FLASH_ERROR;
             break;
@@ -419,8 +430,8 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
         addr++;
         data++;
     }
-    
+
     GPIOA->cfglr = 0x44444444;  // input
-    
+
     return res;
 }
