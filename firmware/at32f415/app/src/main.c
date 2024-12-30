@@ -46,8 +46,9 @@ typedef struct disksize_s{
 	uint32_t freesize;
 }disksize_t;
 
-static FATFS *fs;
+static FATFS fatfs;
 const flash_t *pfls;
+static uint8_t mounted;
 
 static void printBuf(const uint8_t *buf, uint32_t len){
     for(int i = 0; i < len; i ++){
@@ -111,18 +112,12 @@ FRESULT mount(TCHAR *path, uint8_t m)
 
     if(m)
     {
-        if(fs){
+        if(mounted){
             printf("FS already mounted\n");
             return FR_OK;
         }
 
-        fs = (FATFS*)malloc(sizeof(FATFS));
-
-        if(!fs){
-            printf("Fail to allocate FS\n");
-        }
-
-        r = f_mount(fs, path, 0);  // 0 = mount later option
+        r = f_mount(&fatfs, path, 0);  // 0 = mount later option
 
         printf("Mount ");
         if(r != FR_OK){
@@ -136,15 +131,12 @@ FRESULT mount(TCHAR *path, uint8_t m)
             }else{
                 printf("FRESULT Error: %d\n", r);
             }
+            mounted = 1;
         }
     }else{
-        r = f_mount(NULL, "0:" ,0);
+        r = f_mount(NULL, "0:", 0);
 
-        if(fs){
-            free(fs);
-        }
-
-        fs = NULL;
+        mounted = 0;
 
         printf("Unmounted\n");
     }
@@ -158,7 +150,7 @@ static int readBlockFromFile(uint8_t *data, uint16_t len, const char *filename, 
     FRESULT fr;
     UINT br = 0;
 
-    if(!fs){
+    if(!mounted){
         printf("No fs mounted\n");
         return -FR_NO_FILESYSTEM;
     }
@@ -364,7 +356,7 @@ static int romCmd(int argc, char **argv)
             rom_read(rom_header, GAME_HEADER_ADDR, sizeof(rom_header));
         }else{
             selectFlashSPI();
-            if(!fs){
+            if(!mounted){
                 if(mount("0:", 1) != FR_OK){
                     return CLI_ERROR;
                 }
@@ -396,7 +388,7 @@ static int romCmd(int argc, char **argv)
 
         spiflash_cfgPins();
 
-        if(!fs)
+        if(!mounted)
             mount("0:", 1);
 
         int res = readBlockFromFile(block, PROG_BLOCK_SIZE, argv[2], addr);
@@ -523,7 +515,7 @@ int main(void)
 
     insertDetection_init();
 
-    fs = NULL;
+    mounted = 0;
 
     delay_ms(500);  // some delay before checking if is inserted
 
