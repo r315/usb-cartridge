@@ -7,6 +7,7 @@
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
 
+#include <stdint.h>
 #include "msc_diskio.h" /* Declarations of disk functions */
 #include "cdc_msc_class.h"
 #include "usb_std.h"
@@ -35,11 +36,11 @@ uint8_t scsi_inquiry[MSC_SUPPORT_MAX_LUN][SCSI_INQUIRY_DATA_LENGTH] = {
         'M',  /* vendor information */
         'B',
         'C',
-        '!',
+        '1',
         ' ',
         ' ',
         ' ',
-        ' ', 
+        ' ',
         'F', /* Product identification */
         'l',
         'a',
@@ -55,11 +56,11 @@ uint8_t scsi_inquiry[MSC_SUPPORT_MAX_LUN][SCSI_INQUIRY_DATA_LENGTH] = {
         ' ',
         ' ',
         ' ',
-        ' ', 
+        ' ',
         '1', /* product revision level */
         '.',
         '0',
-        '0' 
+        '0'
     }
 };
 
@@ -93,7 +94,7 @@ uint8_t *get_inquiry (uint8_t lun)
 
 /**
  * @brief  Read data block from disk
- * 
+ *
  * @param  lun:   logical units number
  * @param  addr:  logical address
  * @param  buf:   pointer to read buffer
@@ -111,7 +112,7 @@ DSTATUS msc_disk_read (uint8_t lun, uint32_t addr, uint8_t *buf, uint32_t len)
 
 /**
  * @brief  Write data block to disk
- * 
+ *
  * @param  lun:  logical units number
  * @param  addr: logical address
  * @param  buf:  pointer to write buffer
@@ -129,7 +130,7 @@ DSTATUS msc_disk_write (uint8_t lun, uint32_t addr, uint8_t *buf, uint32_t len)
 
 /**
  * @brief  Responds with disk capacity in blocks and block size
- * 
+ *
  * @param  lun: logical units number
  * @param  blk_nbr: pointer to number of block
  * @param  blk_size: pointer to block size
@@ -138,11 +139,11 @@ DSTATUS msc_disk_write (uint8_t lun, uint32_t addr, uint8_t *buf, uint32_t len)
 DSTATUS msc_disk_capacity (uint8_t lun, uint32_t *blk_nbr, uint32_t *blk_size)
 {
     if(lun == SPI_FLASH_LUN){
-        *blk_size = 512;
-        *blk_nbr  = flashspi_getsize () / 512;
+        *blk_size = FF_MIN_SS;
+        *blk_nbr  = flashspi_getsize () / *blk_size;
         return USB_OK;
     }
-    
+
     return USB_ERROR;
 }
 
@@ -152,9 +153,9 @@ DSTATUS msc_disk_capacity (uint8_t lun, uint32_t *blk_nbr, uint32_t *blk_size)
 
 /**
  * @brief Check if requested drive is available
- * 
+ *
  * @param pdrv Physical drive number to identify the drive
- * @return DSTATUS 
+ * @return DSTATUS
  */
 DSTATUS disk_status (BYTE pdrv)
 {
@@ -169,9 +170,9 @@ DSTATUS disk_status (BYTE pdrv)
 
 /**
  * @brief Initialyses disk
- * 
+ *
  * @param pdrv Physical drive number to identify the drive
- * @return DSTATUS 
+ * @return DSTATUS
  */
 DSTATUS disk_initialize (BYTE pdrv)
 {
@@ -183,12 +184,12 @@ DSTATUS disk_initialize (BYTE pdrv)
         }
     }
 
-    return status;   
+    return status;
 }
 
 /**
  * @brief Read sectors from disk
- * 
+ *
  * @param pdrv   Physical drive number to identify the drive
  * @param buff   Data buffer to store read data
  * @param sector Start sector in LBA
@@ -197,7 +198,7 @@ DSTATUS disk_initialize (BYTE pdrv)
 DRESULT disk_read (BYTE pdrv, BYTE *buff, LBA_t sector, UINT count)
 {
     if(pdrv == SPI_FLASH_DISK){
-        return (DRESULT) flashspi_read (buff, sector * 512, count * 512);
+        return (DRESULT) flashspi_read (buff, sector * FF_MIN_SS, count * FF_MIN_SS);
     }
 
    return RES_PARERR;
@@ -206,17 +207,17 @@ DRESULT disk_read (BYTE pdrv, BYTE *buff, LBA_t sector, UINT count)
 #if FF_FS_READONLY == 0
 /**
  * @brief Write sectors to disk
- * 
+ *
  * @param pdrv   Physical drive number to identify the drive
  * @param buff   Data to be written
  * @param sector Start sector in LBA
  * @param count  Number of sectors to written
- * @return DRESULT 
+ * @return DRESULT
  */
 DRESULT disk_write (BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count)
 {
     if(pdrv == SPI_FLASH_DISK){
-        return (DRESULT) flashspi_write (buff, sector * 512, count * 512);
+        return (DRESULT) flashspi_write (buff, sector * FF_MIN_SS, count * FF_MIN_SS);
     }
 
     return RES_PARERR;
@@ -226,39 +227,41 @@ DRESULT disk_write (BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count)
 
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  * @param pdrv  Physical drive number to identify the drive
  * @param cmd   Control code
  * @param buff  Buffer to send/receive control data
- * @return DRESULT 
+ * @return DRESULT
  */
 DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void *buff)
 {
     DRESULT status = RES_PARERR;
-      
+
     if(pdrv == SPI_FLASH_DISK){
         switch (cmd){
             case CTRL_SYNC:
                 status = RES_OK;
                 break;
             case GET_SECTOR_SIZE:
-                *(DWORD *) buff = 512;
+                *(DWORD *) buff = FF_MIN_SS;
                 status          = RES_OK;
                 break;
             case GET_SECTOR_COUNT:
-                *(DWORD *) buff =  flashspi_getsize () / 512;
+                *(DWORD *) buff = flashspi_getsize () / FF_MIN_SS;
                 status          = RES_OK;
                 break;
             case GET_BLOCK_SIZE:
-                *(DWORD *) buff =  flashspi_getsize ();
+                //flashspi_getsectorsize() can cause bluescreen
+                // after f_mkfs()
+                *(DWORD *) buff = flashspi_getsize();
                 status          = RES_OK;
                 break;
             default:
                 status = RES_PARERR;
                 break;
-        }            
+        }
    }
-   
+
    return status;
 }
