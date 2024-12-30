@@ -94,6 +94,7 @@ $(DEVICE) \
 BOARD_415DK \
 USE_STDPERIPH_DRIVER \
 AT32_SPI2 \
+MBC1_REVA \
 
 C_DEFS +=$(FEATURE_ENABLE)
 
@@ -106,7 +107,7 @@ CPU =-mcpu=cortex-m4 -mthumb
 
 # fpu
 #at43f415 does not have FPU
-#FPU =-mfloat-abi=hard -mfpu=fpv4-sp-d16 
+#FPU =-mfloat-abi=hard -mfpu=fpv4-sp-d16
 #FPU =-mfloat-abi=soft
 
 # float-abi
@@ -118,7 +119,7 @@ MCU = $(CPU) $(FPU) $(FLOAT_ABI)
 ifdef RELEASE
 OPT   =-O2
 else
-OPT   =-Og -g -gdwarf-2 -Wall #-Wextra
+OPT   =-O0 -g -gdwarf-2 -Wall #-Wextra
 endif
 
 ifndef V
@@ -129,7 +130,7 @@ endif
 
 ASFLAGS  =$(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 CFLAGS   =$(MCU) $(OPT) $(addprefix -D, $(C_DEFS)) $(addprefix -I, $(C_INCLUDES)) -std=gnu11 -fdata-sections -ffunction-sections #-fstack-usage
-CPPFLAGS =$(CPU) $(OPT) $(addprefix -D, $(C_DEFS)) $(addprefix -I, $(C_INCLUDES)) -fdata-sections -ffunction-sections -fno-unwind-tables -fno-exceptions -fno-rtti 
+CPPFLAGS =$(CPU) $(OPT) $(addprefix -D, $(C_DEFS)) $(addprefix -I, $(C_INCLUDES)) -fdata-sections -ffunction-sections -fno-unwind-tables -fno-exceptions -fno-rtti
 LDFLAGS  =$(MCU) $(SPECS) -Wl,-Map,$(BUILD_PATH)/$(TARGET).map,--cref,--gc-sections
 
 # Generate dependency information
@@ -145,7 +146,7 @@ SPECS =--specs=rdimon.specs
 LDLIBS =-nostartfiles -lc -lrdimon
 else
 SPECS=--specs=nosys.specs --specs=nano.specs
-#-nostdlib -lstd++ -lnosys -lm 
+#-nostdlib -lstd++ -lnosys -lm
 LIBS =-lstdc++
 endif
 
@@ -198,7 +199,7 @@ $(TARGET): $(BUILD_PATH)/$(TARGET).elf
 	@echo "--- Size ---"
 	$(VERBOSE)$(SZ) -A -x $<
 	$(VERBOSE)$(SZ) -B $<
-	
+
 
 bin: $(BUILD_PATH)/$(TARGET).bin
 
@@ -241,11 +242,11 @@ $(BUILD_PATH)/$(TARGET).elf: $(BUILD_PATH) $(OBJECTS)
 
 $(BUILD_PATH)/%.hex: $(BUILD_PATH)/%.elf
 	$(VERBOSE)$(HEX) $< $@
-	
+
 $(BUILD_PATH)/%.bin: $(BUILD_PATH)/%.elf
 	$(VERBOSE)$(BIN) $< $@
-	
-$(BUILD_PATH):	
+
+$(BUILD_PATH):
 	@$(foreach obj, $(OBJECTS), mkdir -p $(dir $(obj));)
 
 #######################################

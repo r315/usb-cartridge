@@ -2,28 +2,48 @@
 #include "at32f415.h"
 #include "board.h"
 
-void norflash_cfgPins(void)
+/**
+ * @brief
+ *
+ *  For solo programmer pinout follows
+ * A15:0 -> PB15:0
+ * A16 -> PA8
+ * A17 -> PA9
+ * A18 -> PF7
+ *
+ * D7:0 <-> PA7:0
+ *
+ * For MBC1_REVA line A-1 is used thus
+ * address has to shift right one.
+ * Because of this half of flash is lost
+ * since even addresses are acessed from cartidge bus
+ *
+ * A-1 -> PF7
+ *
+ */
+static void norflash_cfgPins(void)
 {
+    // Set bus states before enable them
     WR_NOR_HIGH;
     RD_NOR_HIGH;
 
-    GPIOA->scr = 0xFF;  // data bus = 0xFF
-    GPIOB->odt = 0;     // Address 0
-    LSB_NOR_LOW;
+    GPIOA->scr = 0x00FF;            // data bus = 0xFF
+    GPIOB->odt = 0x0000;            // Address A15:0 = 0
+    LSB_NOR_LOW;                    // A-1 = 0
 
-    GPIOA->cfglr = 0x44444444;
-    GPIOB->cfglr = 0x22222222;
-    GPIOB->cfghr = 0x22222222;
+    GPIOA->cfglr = 0x44444444;      // D7:0, input
+    GPIOB->cfglr = 0x22222222;      // A7:0, output
+    GPIOB->cfghr = 0x22222222;      // A15:0, output
 
-    GPIOC->cfghr = 0x22244444;
-    GPIOF->cfglr = 0x24444444;   
+    GPIOC->cfghr = 0x22244444;      // WRn, RWEn, RDn, output
+    GPIOF->cfglr = 0x24444444;      // A-1, output
 }
 
 /**
- * @brief Initialyzes GPIO peripherals and 
+ * @brief Initialyzes GPIO peripherals and
  * configures necessary pins
- * 
- * @return flash_res_t 
+ *
+ * @return flash_res_t
  */
 flash_res_t norflash_init(void)
 {
@@ -41,25 +61,27 @@ flash_res_t norflash_init(void)
 }
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
 void norflash_deinit(void)
 {
-    GPIOA->cfglr = 0x44444444;
-    GPIOB->cfglr = 0x44444444;
-    GPIOB->cfghr = 0x44444444;
+    GPIOA->cfglr = 0x44444444;  // D7:0
+    GPIOB->cfglr = 0x44444444;  // A7:0
+    GPIOB->cfghr = 0x44444444;  // A15:8
+    GPIOC->cfghr = 0x44444444;  // WRn, RWEn, RDn, output
+    GPIOF->cfghr = 0x44444444;  // A-1
 }
 
 /**
  * @brief Reads byte from nor flash
  *  In HW revA address bus is shifted left one bit.
  *  Due to this error rom_read only accesses half of flash.
- *  When issuing commands to flash, addresses must be trnaslated 
+ *  When issuing commands to flash, addresses must be trnaslated
  *  by shifting them right by one and use LSb with setA_1(x)
- * 
- * @param addr 
- * @return uint8_t 
+ *
+ * @param addr
+ * @return uint8_t
  */
 uint8_t norflash_readbyte(uint16_t addr)
 {
@@ -80,12 +102,12 @@ uint8_t norflash_readbyte(uint16_t addr)
 
 /**
  * @brief Write byte to flash nor
- * 
- * @param addr 
- * @param data 
+ *
+ * @param addr
+ * @param data
  */
 void norflash_writebyte(uint16_t addr, uint8_t data)
-{    
+{
     RD_NOR_HIGH;
     WR_NOR_HIGH;
     GPIOA->cfglr = 0x22222222;  // output
@@ -96,17 +118,17 @@ void norflash_writebyte(uint16_t addr, uint8_t data)
     WR_NOR_LOW;
     delay_us(10);
     WR_NOR_HIGH;
-    
+
     GPIOA->cfglr = 0x44444444;  // input
 }
 
 /**
  * @brief Generic read
- * 
- * @param buf 
- * @param addr 
- * @param len 
- * @return flash_res_t 
+ *
+ * @param buf
+ * @param addr
+ * @param len
+ * @return flash_res_t
  */
 flash_res_t norflash_read(uint8_t *buf, uint32_t addr, uint16_t len)
 {
@@ -130,11 +152,11 @@ flash_res_t norflash_read(uint8_t *buf, uint32_t addr, uint16_t len)
 
 /**
  * @brief Generic program
- * 
- * @param buf 
- * @param addr 
- * @param len 
- * @return flash_res_t 
+ *
+ * @param buf
+ * @param addr
+ * @param len
+ * @return flash_res_t
  */
 flash_res_t norflash_write(const uint8_t *buf, uint32_t addr, uint16_t len)
 {
@@ -154,8 +176,8 @@ flash_res_t norflash_write(const uint8_t *buf, uint32_t addr, uint16_t len)
 
 /**
  * @brief perfroms a read cycle on bus
- * 
- * @return uint8_t 
+ *
+ * @return uint8_t
  */
 uint8_t norflash_readbus(void)
 {
@@ -169,16 +191,16 @@ uint8_t norflash_readbus(void)
 
 /**
  * @brief generic bit6 toggle polling
- * 
- * @param expecteddata 
- * @return flash_res_t 
+ *
+ * @param expecteddata
+ * @return flash_res_t
  */
 flash_res_t norflash_polling(uint8_t expecteddata)
 {
     uint8_t last_status = norflash_readbus();
     uint8_t toggle = 2;
     uint32_t time = get_tick();
-    
+
     do{
         uint8_t status = norflash_readbus();
 
@@ -202,6 +224,6 @@ flash_res_t norflash_polling(uint8_t expecteddata)
             return FLASH_ERROR_TIMEOUT;
         }
     }while(toggle);
-    
+
     return FLASH_OK; // bit6 has stop toggling
 }

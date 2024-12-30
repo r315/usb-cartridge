@@ -182,13 +182,11 @@ err:
 }
 
 static void selectFlashSPI(void){
-    spiflash_cfgPins();
     spiflash_init();
     pfls = flashspi_get();
 }
 
 static void selectFlashNOR(void){
-    norflash_cfgPins();
     flashnor_init();
     pfls = flashnor_get();
 }
@@ -395,7 +393,7 @@ static int romCmd(int argc, char **argv)
             return CLI_OK;
         }
 
-        spiflash_cfgPins();
+        mem_bus_configure(MEM_BUS_SPI);
 
         if(!mounted)
             mount("0:", 1);
@@ -416,7 +414,7 @@ static int romCmd(int argc, char **argv)
 
         while(1){
             if(res > 0){
-                norflash_cfgPins();
+                mem_bus_configure(MEM_BUS_NOR);
 
                 if(rom_program(block, addr, PROG_BLOCK_SIZE) != FLASH_OK){
                     printf("\nProgram failed at block: %lx\n", addr);
@@ -449,7 +447,7 @@ static int romCmd(int argc, char **argv)
                 break;
             }
 
-            spiflash_cfgPins();
+            mem_bus_configure(MEM_BUS_SPI);
             res = readBlockFromFile(block, PROG_BLOCK_SIZE, argv[2], addr);
         }
 
@@ -521,9 +519,11 @@ int main(void)
 
     CLI_Init("cart >");
     CLI_RegisterCommand(cli_cmds, sizeof(cli_cmds) / sizeof(cli_command_t));
-
+#ifdef MBC1_REVA
     insertDetection_init();
-
+#else
+    selectFlashNOR(); // Just to configure pins
+#endif
     mounted = 0;
 
     delay_ms(500);  // some delay before checking if is inserted

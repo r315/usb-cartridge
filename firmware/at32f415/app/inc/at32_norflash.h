@@ -17,7 +17,6 @@
 
 flash_res_t norflash_init(void);
 void norflash_deinit(void);
-void norflash_cfgPins(void);
 uint8_t norflash_readbyte(uint16_t addr);
 void norflash_writebyte(uint16_t addr, uint8_t data);
 flash_res_t norflash_write(const uint8_t* pbuffer, uint32_t writeaddr, uint16_t numbytetowrite);

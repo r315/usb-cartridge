@@ -16,9 +16,9 @@ void spiflash_cs (uint8_t state)
 
 /**
  * @brief Configure IO pins fo SPI use
- * 
+ *
  */
-void spiflash_cfgPins(void)
+static void spiflash_cfgPins(void)
 {
    gpio_init_type GPIO_InitStructure;
    /*Deselect FLASH*/

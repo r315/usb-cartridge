@@ -12,6 +12,12 @@
         CRM->apb2en_bit.gpioaen = 1; \
         GPIOA->cfghr |= (6 << 0)
 
+enum mem_bus {
+    MEM_BUS_NONE = 0,
+    MEM_BUS_SPI,
+    MEM_BUS_NOR,
+};
+
 void board_init(void);
 void system_clock_config(void);
 void system_tick_init(void);
@@ -36,4 +42,5 @@ flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len);
 void rom_setBank(uint8_t bank);
 uint8_t rom_readbyte(uint32_t address);
 flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len);
+void mem_bus_configure(uint8_t bus);
 #endif

@@ -30,6 +30,14 @@ void sw_reset(void){
 
 void board_init(void)
 {
+#ifdef MBC1_REVA
+    // HW revA requires A-1 low (Correction made: PF7 -> Q15/A-1)
+    // and must be set low as soon as possible
+    // other pins are configured when required
+    crm_periph_clock_enable(CRM_GPIOF_PERIPH_CLOCK, TRUE);
+    LSB_NOR_LOW;                // Set pin A-1 to low
+    GPIOF->cfglr = 0x24444444;  // PF7 as output push-pull
+#endif
     LED1_INIT;
     SystemInit();
     system_clock_config();
@@ -37,12 +45,31 @@ void board_init(void)
     cycle_count_init();
     nvic_priority_group_config(NVIC_PRIORITY_GROUP_4);
 
-    // HW revA requires A-1 low (Correction made: PF7 -> Q15/A-1)
-    crm_periph_clock_enable(CRM_GPIOF_PERIPH_CLOCK, TRUE);
-    GPIOF->cfglr = 0x24444444; // PF7 as output push-pull
-    LSB_NOR_LOW;    // Set pin A-1 to low
-
     redirect_stdout(&stdout_ops_serial);
+}
+
+void mem_bus_configure(uint8_t bus)
+{
+    switch(bus){
+        case MEM_BUS_NONE:
+            GPIOA->cfglr = 0x44444444; // D7:0, input
+            GPIOB->cfglr = 0x44444444; // A7:0, input
+            GPIOB->cfghr = 0x44444444; // A15:8, input
+            GPIOC->cfghr = 0x44444444; // WRn, RWEn, RDn, input
+            GPIOF->cfghr = 0x44444444; // A-1, input
+            break;
+        case MEM_BUS_SPI:
+            GPIOB->cfghr = (GPIOB->cfghr &0x000FFFFF) | 0x99900000; // MISO, MOSI, SCK
+            GPIOA->cfghr = (GPIOA->cfghr &0xFFFFF0FF) | 0x00000100; // CS
+            break;
+        case MEM_BUS_NOR:
+            GPIOA->cfglr = 0x44444444; // D7:0, input
+            GPIOB->cfglr = 0x22222222; // A7:0, output
+            GPIOB->cfghr = 0x22222222; // A15:0, output
+            GPIOC->cfghr = 0x22244444; // WRn, RWEn, RDn, output
+            GPIOF->cfglr = (GPIOF->cfglr &0x0FFFFFFF) | 0x20000000; // A-1, output
+            break;
+    }
 }
 
 /**
@@ -121,7 +148,6 @@ void usb_config(void)
             &cdc_msc_class_handler,
             &cdc_msc_desc_handler
         );
-
 }
 
 /**
@@ -139,6 +165,17 @@ void usb_unplug(void)
     usb_gpio_deinit();
 
     otg_core_struct.usb_reg = NULL;
+}
+
+/**
+ * @brief Check if a connection between usb peripheral and
+ * usb host is established
+ *
+ * @return uint8_t
+ */
+uint8_t usb_isConnected(void)
+{
+    return otg_core_struct.dev.conn_state == USB_CONN_STATE_CONFIGURED;
 }
 
 /**
@@ -161,29 +198,7 @@ void connectUSB(void)
 void disconnectUSB(void)
 {
     usb_unplug();
-    GPIOA->cfglr = (GPIOA->cfglr & 0xFFFF0000) | 0x00004444;
-    GPIOB->cfglr = 0x44444444;
-}
-
-/**
- * @brief Check if a connection between usb peripheral and
- * usb host is established
- *
- * @return uint8_t
- */
-uint8_t usb_isConnected(void)
-{
-    return otg_core_struct.dev.conn_state == USB_CONN_STATE_CONFIGURED;
-}
-
-/**
-  * @brief  Interrupt handler fo otgfs
-  * @param  none
-  * @retval none
-  */
-void OTGFS1_IRQHandler(void)
-{
-  usbd_irq_handler(&otg_core_struct);
+    mem_bus_configure(MEM_BUS_NONE);
 }
 
 /**
@@ -268,22 +283,11 @@ void insertDetection_init(void)
  */
 uint8_t isInserted(void)
 {
+#ifndef MBC1_REVA
+    return 0;
+#else
     return !!(GPIOA->idt & GPIO_PINS_15);
-}
-
-/**
- * @brief Interrupt handler that
- * disables all pins
- *
- */
-void EXINT15_10_IRQHandler(void)
-{
-    if(EXINT->intsts & GPIO_PINS_15){
-        // Disable IO's connected to flash bus
-        GPIOA->cfglr = (GPIOA->cfglr & 0xFFFF0000) | 0x00004444;
-        GPIOB->cfglr = 0x44444444;
-        EXINT->intsts = GPIO_PINS_15;
-    }
+#endif
 }
 
 /**
@@ -434,4 +438,27 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
     GPIOA->cfglr = 0x44444444;  // input
 
     return res;
+}
+
+/**
+  * @brief  Interrupt handler fo otgfs
+  * @param  none
+  * @retval none
+  */
+void OTGFS1_IRQHandler(void)
+{
+  usbd_irq_handler(&otg_core_struct);
+}
+
+/**
+ * @brief Interrupt handler that
+ * disables all pins
+ *
+ */
+void EXINT15_10_IRQHandler(void)
+{
+    if(EXINT->intsts & GPIO_PINS_15){
+        mem_bus_configure(MEM_BUS_NONE);
+        EXINT->intsts = GPIO_PINS_15;
+    }
 }

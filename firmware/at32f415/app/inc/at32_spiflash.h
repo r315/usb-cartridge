@@ -20,7 +20,7 @@
 #define FLASH_SPI_MOSI_GPIO         GPIOA
 
 /*CS Pin*/
-#define FLASH_SPI_CS_PIN            GPIO_PINS_4
+#define FLASH_SPI_CS_PIN            GPIO_PINS_10
 #define FLASH_SPI_CS_GPIO           GPIOA
 #else
 #define FLASH_SPI                   SPI2
@@ -41,7 +41,6 @@
 
 
 void spiflash_init(void);
-void spiflash_cfgPins(void);
 void spiflash_cs(uint8_t state);
 uint8_t spiflash_sendbyte (uint8_t byte);
 uint8_t spiflash_readbyte (void);
