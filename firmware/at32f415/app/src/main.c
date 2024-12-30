@@ -330,6 +330,15 @@ static int flashCmd(int argc, char **argv)
         return CLI_OK;
     }
 
+#if FF_USE_MKFS
+    if(!strcmp(argv[1], "format")) {
+        printf("Formating spi flash... ");
+        res = f_mkfs("0:", NULL, fatfs.win, sizeof(fatfs.win));
+        printf("%d\n", res);
+        return CLI_OK;
+    }
+#endif
+
     return CLI_BAD_PARAM;
 }
 
