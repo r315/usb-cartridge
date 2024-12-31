@@ -56,10 +56,17 @@ void mem_bus_configure(uint8_t bus)
             GPIOB->cfglr = 0x44444444; // A7:0, input
             GPIOB->cfghr = 0x44444444; // A15:8, input
             GPIOC->cfghr = 0x44444444; // WRn, RWEn, RDn, input
-            GPIOF->cfghr = 0x44444444; // A-1, input
+        #ifdef MBC1_REVA
+            setA_1(0);
+            GPIOF->cfghr = 0x24444444; // A-1, output low
+        #endif
             break;
         case MEM_BUS_SPI:
+            #ifdef AT32_SPI2
             GPIOB->cfghr = (GPIOB->cfghr &0x000FFFFF) | 0x99900000; // MISO, MOSI, SCK
+            #else
+            GPIOA->cfglr = (GPIOA->cfglr &0x000FFFFF) | 0x99900000; // MISO, MOSI, SCK
+            #endif
             GPIOA->cfghr = (GPIOA->cfghr &0xFFFFF0FF) | 0x00000100; // CS
             break;
         case MEM_BUS_NOR:

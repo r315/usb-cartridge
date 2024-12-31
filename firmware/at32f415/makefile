@@ -77,6 +77,7 @@ $(APP_PATH)/src/flashspi_gd25lq16.c \
 $(APP_PATH)/src/flashspi_winbond.c \
 $(APP_PATH)/src/flashspi_macronix.c \
 $(APP_PATH)/src/flash_en29lv320.c \
+$(APP_PATH)/src/flash_mbm29f040.c \
 
 CPPSRCS = \
 

@@ -11,7 +11,7 @@
 #define RD_NOR_LOW      GPIOC->clr = (1 << 15)
 #define RD_NOR_HIGH     GPIOC->scr = (1 << 15)
 
-#define setA_1(S)  GPIOF->scr = (1 << 23) | ( (S) << 7) // A-1 (Address line -1)
+#define setA_1(S)       GPIOF->scr = (1 << 23) | ( (S) << 7) // A-1 (Address line -1)
 #define LSB_NOR_LOW     setA_1(0)
 #define LSB_NOR_HIGH    setA_1(1)
 

@@ -88,8 +88,12 @@ uint8_t norflash_readbyte(uint16_t addr)
     uint8_t data;
     WR_NOR_HIGH;
     RD_NOR_HIGH;
+#ifdef MBC1_REVA
     GPIOB->odt = addr >> 1;
     setA_1(addr & 1);
+#else
+    GPIOB->odt = addr;
+#endif
     delay_us(1);
     RD_NOR_LOW;
     delay_us(1);
@@ -111,8 +115,12 @@ void norflash_writebyte(uint16_t addr, uint8_t data)
     RD_NOR_HIGH;
     WR_NOR_HIGH;
     GPIOA->cfglr = 0x22222222;  // output
+#ifdef MBC1_REVA
     GPIOB->odt = addr >> 1;
     setA_1(addr & 1);
+#else
+    GPIOB->odt = addr;
+#endif
     GPIOA->odt = (GPIOA->odt & 0xFF00) | data;
     delay_us(10);
     WR_NOR_LOW;
@@ -136,8 +144,12 @@ flash_res_t norflash_read(uint8_t *buf, uint32_t addr, uint16_t len)
     RD_NOR_HIGH;
 
     while(len--){
+#ifdef MBC1_REVA
         GPIOB->odt = addr >> 1;
         setA_1(addr & 1);
+#else
+        GPIOB->odt = addr;
+#endif
         delay_us(1);
         RD_NOR_LOW;
         delay_us(1);
