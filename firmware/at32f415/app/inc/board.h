@@ -40,7 +40,7 @@ uint8_t isInserted(void);
 void insertDetection_init(void);
 flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len);
 void rom_setBank(uint8_t bank);
-uint8_t rom_readbyte(uint32_t address);
+uint8_t rom_byte_read(uint32_t address);
 flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len);
 void mem_bus_configure(uint8_t bus);
 #endif

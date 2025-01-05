@@ -14,8 +14,8 @@
 #define FLASH_SPI_CMD_CE        0xC7  /*!< Chip Erase */
 
 flash_res_t flashspi_init(void);
-flash_res_t flashspi_write(const uint8_t* pbuffer, uint32_t writeaddr, uint16_t numbytetowrite);
-flash_res_t flashspi_read(uint8_t* pbuffer, uint32_t readaddr, uint16_t numbytetoread);
+flash_res_t flashspi_write(const uint8_t* pbuffer, uint32_t writeaddr, uint32_t numbytetowrite);
+flash_res_t flashspi_read(uint8_t* pbuffer, uint32_t readaddr, uint32_t numbytetoread);
 void flashspi_writeenable(void);
 uint32_t flashspi_getsize(void);
 uint32_t flashspi_getsectorsize(void);

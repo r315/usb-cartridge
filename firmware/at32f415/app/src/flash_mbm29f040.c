@@ -21,47 +21,22 @@ static flash_res_t mbm29f040_init(void)
  */
 static flash_res_t mbm29f040_erase(uint32_t sector)
 {
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_ERASE);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
+    norflash_byte_write(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
+    norflash_byte_write(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
+    norflash_byte_write(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_ERASE);
+    norflash_byte_write(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
+    norflash_byte_write(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
 
     if(sector == FLASH_CHIP_ERASE){
-        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_ERASE_CHIP);
+        norflash_byte_write(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_ERASE_CHIP);
         //delay_ms(f29f040_CHIP_ERASE_TIME);
     }else{
-        norflash_writebyte(sector * MBM29F040_SECTOR_SIZE, FLASH_CMD_ERASE_SECTOR);
+        norflash_byte_write(sector * MBM29F040_SECTOR_SIZE, FLASH_CMD_ERASE_SECTOR);
     }
 
-    return norflash_polling(0xFF);
+    return flashnor_polling(0xFF);
 }
 
-/**
- * @brief Write buffer to flash
- *        This flash seams to only support single byte write
- *        thus making write quite slow
- *
- * @param data
- * @param address
- * @param len
- * @return flash_res_t
- */
-static flash_res_t mbm29f040_write(const uint8_t *data, uint32_t address, uint16_t len)
-{
-    while(len--){
-        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
-        norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
-        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_PROGRAM);
-        norflash_writebyte(address++, *data);
-
-        if(norflash_polling(*data) != FLASH_OK){
-            return FLASH_ERROR;
-        }
-    }
-
-    return FLASH_OK;
-}
 
 const flash_t mbm29f040 = {
     .name = "29f040",
@@ -72,6 +47,6 @@ const flash_t mbm29f040 = {
     .sectorsize = MBM29F040_SECTOR_SIZE,
     .init = mbm29f040_init,
     .erase = mbm29f040_erase,
-    .read = norflash_read,
-    .write = mbm29f040_write
+    .read = flashnor_read,
+    .write = flashnor_write
 };

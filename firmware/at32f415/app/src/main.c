@@ -429,7 +429,7 @@ static int romCmd(int argc, char **argv)
                 }
 
                 for(int i = 0; i < PROG_BLOCK_SIZE; i++){
-                    if(rom_readbyte(addr + i) != block[i]){
+                    if(rom_byte_read(addr + i) != block[i]){
                         printf("\nFailed at address: %lx\n", addr + i);
                         fail = 1;
                         break;
@@ -495,7 +495,7 @@ static int romCmd(int argc, char **argv)
 
         CLI_Ha2i(argv[2], &addr);
         if(addr < pfls->size){
-            uint8_t data = rom_readbyte(addr);
+            uint8_t data = rom_byte_read(addr);
             printf("%02X\n", data);
             return CLI_OK;
         }

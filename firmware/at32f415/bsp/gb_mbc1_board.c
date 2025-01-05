@@ -5,6 +5,7 @@
 #include "usbd_int.h"
 #include "msc_diskio.h"
 #include "syscalls.h"
+#include "flashnor.h"
 
 #define ROM_ADDR_BANK_SELL      0x2000
 #define ROM_ADDR_BANK_SELH      0x4000
@@ -32,8 +33,8 @@ void board_init(void)
 {
 #ifdef MBC1_REVA
     // HW revA requires A-1 low (Correction made: PF7 -> Q15/A-1)
-    // and must be set low as soon as possible
-    // other pins are configured when required
+    // and must be set low as soon as possible and never changed from output.
+    // Other pins are configured when required
     crm_periph_clock_enable(CRM_GPIOF_PERIPH_CLOCK, TRUE);
     LSB_NOR_LOW;                // Set pin A-1 to low
     GPIOF->cfglr = 0x24444444;  // PF7 as output push-pull
@@ -52,13 +53,11 @@ void mem_bus_configure(uint8_t bus)
 {
     switch(bus){
         case MEM_BUS_NONE:
-            GPIOA->cfglr = 0x44444444; // D7:0, input
-            GPIOB->cfglr = 0x44444444; // A7:0, input
-            GPIOB->cfghr = 0x44444444; // A15:8, input
-            GPIOC->cfghr = 0x44444444; // WRn, RWEn, RDn, input
+            NOR_DATA_INPUT;
+            NOR_ADDRESS_INPUT;
+            NOR_CTRL_INPUT;
         #ifdef MBC1_REVA
             setA_1(0);
-            GPIOF->cfghr = 0x24444444; // A-1, output low
         #endif
             break;
         case MEM_BUS_SPI:
@@ -70,11 +69,9 @@ void mem_bus_configure(uint8_t bus)
             GPIOA->cfghr = (GPIOA->cfghr &0xFFFFF0FF) | 0x00000100; // CS
             break;
         case MEM_BUS_NOR:
-            GPIOA->cfglr = 0x44444444; // D7:0, input
-            GPIOB->cfglr = 0x22222222; // A7:0, output
-            GPIOB->cfghr = 0x22222222; // A15:0, output
-            GPIOC->cfghr = 0x22244444; // WRn, RWEn, RDn, output
-            GPIOF->cfglr = (GPIOF->cfglr &0x0FFFFFFF) | 0x20000000; // A-1, output
+            NOR_DATA_INPUT;
+            NOR_ADDRESS_INPUT;
+            NOR_CTRL_OUTPUT;
             break;
     }
 }
@@ -308,14 +305,10 @@ void rom_setBank(uint8_t bank)
 {
     WR_NOR_HIGH;
     RD_NOR_HIGH;
-    GPIOA->cfglr = 0x22222222;  // output
-    GPIOB->odt = ROM_ADDR_BANK_SELL;
-    GPIOA->odt = (GPIOA->odt & 0xFF00) | (bank & 0x0F);
-    delay_us(10);
-    WR_PAL_LOW;
-    delay_us(10);
-    WR_PAL_HIGH;
-    GPIOA->cfglr = 0x44444444;  // input
+    NOR_DATA_OUTPUT;
+    NOR_ADDRESS_SET(ROM_ADDR_BANK_SELL);
+    NOR_DATA_WRITE(bank & 0x0F);
+    NOR_DATA_INPUT;
 }
 
 /**
@@ -324,35 +317,13 @@ void rom_setBank(uint8_t bank)
  * @param address
  * @return uint8_t
  */
-uint8_t rom_readbyte(uint32_t address)
+uint8_t rom_byte_read(uint32_t address)
 {
     uint8_t data;
-
-    WR_NOR_HIGH;
-    RD_NOR_HIGH;
-    LSB_NOR_LOW;
-
-    // Select bank
-    if(address < 0x4000){
-        rom_setBank(0);
-    }else{
-        // Accessing rom bank, use A[17:14] bits as bank select
-        rom_setBank(address >> 14);
-        // The 16kB of rom bank are accessed with A14 high and A[13:0] bits
-        address = (0x4000 | address) & 0x7FFF;
-    }
-
-    GPIOB->odt = address;
-    delay_us(1);
-    RD_NOR_LOW;
-    delay_us(1);
-    data = (uint8_t)GPIOA->idt;
-    RD_NOR_HIGH;
-    delay_us(1);
-
+    rom_read(&data, address, 1);
     return data;
-}
 
+}
 /**
  * @brief Reads data from rom.
  *
@@ -366,27 +337,19 @@ flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len)
 {
     uint32_t romaddr;
 
-    RD_NOR_HIGH;
-    WR_NOR_HIGH;
-    LSB_NOR_LOW;
-
     while(len--){
+        // Select bank
         if(address < 0x4000){
             rom_setBank(0);
             romaddr = address;
         }else{
+            // Accessing rom bank, use A[17:14] bits as bank select
             rom_setBank(address >> 14);
+            // The 16kB of rom bank are accessed with A14 high and A[13:0] bits
             romaddr = (0x4000 | address) & 0x7FFF;
         }
 
-        GPIOB->odt = romaddr;
-        delay_us(1);
-        RD_NOR_LOW;
-        delay_us(1);
-        *data++ = (uint8_t)GPIOA->idt;
-        RD_NOR_HIGH;
-        delay_us(1);
-
+        *data++ = norflash_byte_read(romaddr);
         address++;
     }
 
@@ -405,9 +368,6 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
 {
     flash_res_t res = FLASH_OK;
     uint32_t romaddr;
-    WR_NOR_HIGH;
-    RD_NOR_HIGH;
-    LSB_NOR_LOW;
 
     while(len--){
         if(addr < 0x4000){
@@ -418,31 +378,11 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
             romaddr = (0x4000 | addr) & 0x7FFF;
         }
 
-        // Program command sequence requires A-1
-        norflash_writebyte(0xAAA, 0xAA);
-        norflash_writebyte(0x555, 0x55);
-        norflash_writebyte(0xAAA, 0xA0);
-
-        GPIOA->cfglr = 0x22222222;  // output
-        GPIOB->odt = romaddr;       // set rom address
-        LSB_NOR_LOW;                // Ignore address line A-1, only even addresses are writen
-        GPIOA->odt = (GPIOA->odt & 0xFF00) | *data;
-        delay_us(10);
-        WR_NOR_LOW;
-        delay_us(10);
-        WR_NOR_HIGH;
-        delay_us(10);
-
-        if(norflash_polling(*data) != FLASH_OK){
-            res = FLASH_ERROR;
-            break;
-        }
+        flashnor_write(data, romaddr, 1);
 
         addr++;
         data++;
     }
-
-    GPIOA->cfglr = 0x44444444;  // input
 
     return res;
 }

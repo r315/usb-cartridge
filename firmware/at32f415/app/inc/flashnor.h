@@ -37,8 +37,8 @@
 flash_res_t flashnor_init(void);
 void flashnor_deinit(void);
 flash_res_t flashnor_read(uint8_t *data, uint32_t address, uint32_t len);
-flash_res_t flashnor_write(uint8_t *data, uint32_t address, uint32_t len);
+flash_res_t flashnor_write(const uint8_t *data, uint32_t address, uint32_t len);
 uint32_t flashnor_getCFI(uint8_t *buf);
 const flash_t *flashnor_get(void);
-
+flash_res_t flashnor_polling(uint8_t expecteddata);
 #endif

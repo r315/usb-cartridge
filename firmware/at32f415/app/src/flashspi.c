@@ -17,8 +17,8 @@ extern const flash_t mx25l1635;
 
 static const flash_t *spiflash;
 static const flash_t *flashspi_devices[] = {
-    &gd25lq16, 
-    &w25q64, 
+    &gd25lq16,
+    &w25q64,
     &w25q128,
     &w25x32,
     &mx25l1635
@@ -57,7 +57,7 @@ flash_res_t flashspi_init (void)
 /**
  * @brief  Get current active spi flash device.
  * @param  None
- * @retval 
+ * @retval
  */
 const flash_t *flashspi_get (void)
 {
@@ -113,7 +113,7 @@ const char* flashspi_getname (void)
  * @retval None
  */
 flash_res_t flashspi_read (uint8_t *pbuffer, uint32_t readaddr,
-                     uint16_t numbytetoread)
+                     uint32_t numbytetoread)
 {
    /*!< select the flash: chip select low */
    spiflash_cs (CS_LOW);
@@ -151,7 +151,7 @@ flash_res_t flashspi_read (uint8_t *pbuffer, uint32_t readaddr,
  * @retval None
  */
 flash_res_t flashspi_write (const uint8_t *pbuffer, uint32_t writeaddr,
-                      uint16_t numbytetowrite)
+                      uint32_t numbytetowrite)
 {
    uint32_t cnt = 0;
    uint32_t sectornum, sectoroffset, sectorremain;
@@ -218,8 +218,8 @@ flash_res_t flashspi_write (const uint8_t *pbuffer, uint32_t writeaddr,
 
 /**
  * @brief Performs a chip erase
- * 
- * @return flash_res_t 
+ *
+ * @return flash_res_t
  */
 flash_res_t flashspi_erase(void)
 {
