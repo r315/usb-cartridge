@@ -252,7 +252,12 @@ static int flashCmd(int argc, char **argv)
     flash_res_t res;
 
     if(argc < 2){
-        printf("usage: flash <select|init|info|erase>\n");
+        printf("usage: flash <select|init|info|erase|read>\n");
+        printf("\tinit\n");
+        printf("\tinfo\n");
+        printf("\terase\n");
+        printf("\tformat, applies only to spi flash\n");
+        printf("\tread <addr> <len>\n");
         printf("\tselect <nor|spi>\n");
         return CLI_OK_LF;
     }
@@ -282,7 +287,7 @@ static int flashCmd(int argc, char **argv)
         printf("Sector size: %u (0x%04X) bytes\n",  (unsigned int)pfls->sectorsize,  (unsigned int)pfls->sectorsize);
         printf("Page size: %u (0x%02X) bytes\n",  (unsigned int)pfls->pagesize,  (unsigned int)pfls->pagesize);
 
-        if(pfls->itf == FLASH_ITF_NOR){
+        if(pfls->opt & FLASH_OPT_CFI){
             uint8_t size = flashnor_getCFI((uint8_t*)argv[0]);
             printf("CFI bytes:\n");
             printBuf((const uint8_t*)argv[0], size);
@@ -330,10 +335,12 @@ static int flashCmd(int argc, char **argv)
 
 #if FF_USE_MKFS
     if(!strcmp(argv[1], "format")) {
-        printf("Formating spi flash... ");
-        res = f_mkfs("0:", NULL, fatfs.win, sizeof(fatfs.win));
-        printf("%d\n", res);
-        return CLI_OK;
+        if((pfls->opt & FLASH_OPT_ITF_MASK) == FLASH_OPT_ITF_SPI){
+            printf("Formating spi flash... ");
+            res = f_mkfs("0:", NULL, fatfs.win, sizeof(fatfs.win));
+            printf("%d\n", res);
+            return CLI_OK;
+        }
     }
 #endif
 
@@ -522,7 +529,8 @@ int main(void)
 #ifdef MBC1_REVA
     insertDetection_init();
 #else
-    selectFlashNOR(); // Just to configure pins
+    selectFlashNOR();
+    mem_bus_configure(MEM_BUS_SPI);
 #endif
     mounted = 0;
 

@@ -58,25 +58,25 @@ static flash_res_t winbond_erase(uint32_t sector)
     return FLASH_ERROR_TIMEOUT;
 }
 
-const flash_t w25x32 = 
+const flash_t w25x32 =
 {
     .name = "W25X32",
     .mid = W25X32_M_ID,
-    .itf = FLASH_ITF_SPI,
+    .opt = FLASH_OPT_ITF_SPI,
     .size = W25X32_SIZE,
     .pagesize = W25X32_PAGE_SIZE,
-    .sectorsize = W25X32_SECTOR_SIZE,  
+    .sectorsize = W25X32_SECTOR_SIZE,
     .init = w25x32_init,
     .erase = winbond_erase,
     .read = flashspi_read,
     .write = flashspi_write
 };
 
-const flash_t w25q64 = 
+const flash_t w25q64 =
 {
     .name = "W25Q64",
     .mid = W25Q64_M_ID,
-    .itf = FLASH_ITF_SPI,
+    .opt = FLASH_OPT_ITF_SPI,
     .size = 0x00800000, /*8m byte*/
     .pagesize = 256,
     .sectorsize = 0x1000,
@@ -86,11 +86,11 @@ const flash_t w25q64 =
     .write = flashspi_write
 };
 
-const flash_t w25q128 = 
+const flash_t w25q128 =
 {
     .name = "W25Q128",
     .mid = W25Q128_M_ID,
-    .itf = FLASH_ITF_SPI,
+    .opt = FLASH_OPT_ITF_SPI,
     .size = 0x01000000, /*16m byte*/
     .pagesize = 256,
     .sectorsize = 0x1000,

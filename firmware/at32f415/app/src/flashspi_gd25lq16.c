@@ -36,7 +36,7 @@ static void gd25lq16_cmd_vsrwren (void)
    spiflash_cs (CS_LOW);
 
    spiflash_sendbyte (GD25LQ16_CMD_VSRWREN);
-   
+
    spiflash_cs (CS_HIGH);
 }
 #endif
@@ -91,7 +91,7 @@ static uint16_t gd25lq16_rdsr_ex(void)
 static flash_res_t gd25lq16_init(void)
 {
     uint16_t sr;
-    
+
     sr = gd25lq16_rdsr_ex();
 
     if(sr & GD25LQ16_SR_EX_QE)
@@ -107,11 +107,11 @@ static flash_res_t gd25lq16_erase(uint32_t sector)
     return FLASH_ERROR;
 }
 
-const flash_t gd25lq16 = 
+const flash_t gd25lq16 =
 {
     .name = "GD25LQ16",
     .mid = GD25LQ16_M_ID,
-    .itf = FLASH_ITF_SPI,
+    .opt = FLASH_OPT_ITF_SPI,
     .size = GD25LQ16_SIZE,
     .pagesize = GD25LQ16_PAGE_SIZE,
     .sectorsize = GD25LQ16_SECTOR_SIZE,

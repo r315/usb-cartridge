@@ -21,7 +21,7 @@ static flash_res_t macronix_wait_wip()
     uint32_t time;
 
     time = get_tick();
-    
+
     do{
         delay_ms(1);
         uint8_t sr = flashspi_read_status();
@@ -72,14 +72,14 @@ static flash_res_t macronix_erase(uint32_t sector)
     return macronix_wait_wip();
 }
 
-const flash_t mx25l1635 = 
+const flash_t mx25l1635 =
 {
     .name = "MX25L1635",
     .mid = MX25L1635_M_ID,
-    .itf = FLASH_ITF_SPI,
+    .opt = FLASH_OPT_ITF_SPI,
     .size = MX25L1635_SIZE,
     .pagesize = MX25L1635_PAGE_SIZE,
-    .sectorsize = MX25L1635_SECTOR_SIZE,  
+    .sectorsize = MX25L1635_SECTOR_SIZE,
     .init = mx25l1635_init,
     .erase = macronix_erase,
     .read = flashspi_read,

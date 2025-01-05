@@ -65,7 +65,7 @@ static flash_res_t mbm29f040_write(const uint8_t *data, uint32_t address, uint16
 
 const flash_t mbm29f040 = {
     .name = "29f040",
-    .itf = FLASH_ITF_NOR,
+    .opt = FLASH_OPT_ITF_NOR,
     .mid = MBM29F040_M_ID,
     .size = MBM29F040_SIZE,
     .pagesize = MBM29F040_PAGE_SIZE,

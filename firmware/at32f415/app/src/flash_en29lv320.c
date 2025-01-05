@@ -64,7 +64,7 @@ static flash_res_t en29lv320_write(const uint8_t *data, uint32_t address, uint16
 
 const flash_t en29lv320 = {
     .name = "EN29LV320",
-    .itf = FLASH_ITF_NOR,
+    .opt = FLASH_OPT_ITF_NOR | FLASH_OPT_CFI,
     .mid = EN29LV320_M_ID,
     .size = EN29LV320_SIZE,
     .pagesize = EN29LV320_PAGE_SIZE,
