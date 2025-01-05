@@ -17,20 +17,15 @@ static const flash_t *flashnor_devices[] = {
 uint32_t flashnor_read_id(void)
 {
     uint32_t id;
-#ifdef MBC1_REVA
-    // MBC1 Flash supports word access, thus id sequence is different
+
     norflash_writebyte(FLASH_CMD_CFI_ADDR, FLASH_CMD_RESET);
+
     norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
     norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
     norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_RMID);
-    id = norflash_readbyte(FLASH_ADDR_RDMID_0);
-    id = norflash_readbyte(FLASH_ADDR_RDMID_1) << 8 | id;
-#else
-    norflash_writebyte(0x555, 0xAA);
-    norflash_writebyte(0x2AA, 0x55);
-    norflash_writebyte(0x555, FLASH_CMD_RMID);
-    id = (norflash_readbyte(1) << 8) | norflash_readbyte(0);
-#endif
+
+    id = (norflash_readbyte(FLASH_ADDR_RDMID_1) << 8) |
+          norflash_readbyte(FLASH_ADDR_RDMID_0);
 
     norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_RESET);
 

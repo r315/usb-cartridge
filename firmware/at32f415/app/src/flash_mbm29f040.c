@@ -23,15 +23,15 @@ static flash_res_t mbm29f040_erase(uint32_t sector)
 {
     norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
     norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, 0x80);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, 0xAA);
-    norflash_writebyte(FLASH_CMD_SEQ_ADDR2, 0x55);
+    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_ERASE);
+    norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
+    norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
 
     if(sector == FLASH_CHIP_ERASE){
-        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, 0x10);
+        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_ERASE_CHIP);
         //delay_ms(f29f040_CHIP_ERASE_TIME);
     }else{
-        norflash_writebyte(sector * MBM29F040_SECTOR_SIZE, 0x30);
+        norflash_writebyte(sector * MBM29F040_SECTOR_SIZE, FLASH_CMD_ERASE_SECTOR);
     }
 
     return norflash_polling(0xFF);
@@ -39,7 +39,7 @@ static flash_res_t mbm29f040_erase(uint32_t sector)
 
 /**
  * @brief Write buffer to flash
- *        This flash seams to only support single by write
+ *        This flash seams to only support single byte write
  *        thus making write quite slow
  *
  * @param data
@@ -52,7 +52,7 @@ static flash_res_t mbm29f040_write(const uint8_t *data, uint32_t address, uint16
     while(len--){
         norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_SEQ_DATA1);
         norflash_writebyte(FLASH_CMD_SEQ_ADDR2, FLASH_CMD_SEQ_DATA2);
-        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, 0xA0);
+        norflash_writebyte(FLASH_CMD_SEQ_ADDR1, FLASH_CMD_PROGRAM);
         norflash_writebyte(address++, *data);
 
         if(norflash_polling(*data) != FLASH_OK){
