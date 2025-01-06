@@ -33,9 +33,10 @@ static void norflash_cfgPins(void)
     // Set bus states before enable them
     WR_NOR_HIGH;
     RD_NOR_HIGH;
+    WR_PAL_HIGH;
     NOR_DATA_WRITE(0xFF);
     NOR_ADDRESS_SET(0);             // A15:0, output
-    NOR_CTRL_OUTPUT;                // WRn, RDn, output
+    NOR_CTRL_OUTPUT;                // WRn, RDn, WREn output
     NOR_DATA_INPUT;
     NOR_ADDRESS_OUTPUT;
 }
