@@ -317,10 +317,10 @@ void rom_setBank(uint8_t bank)
  * @param address
  * @return uint8_t
  */
-uint8_t rom_byte_read(uint32_t address)
+uint8_t rom_byte_read(const flash_t *flash, uint32_t address)
 {
     uint8_t data;
-    rom_read(&data, address, 1);
+    rom_read(flash, &data, address, 1);
     return data;
 
 }
@@ -333,7 +333,7 @@ uint8_t rom_byte_read(uint32_t address)
  *
  * @return flash_res_t
  */
-flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len)
+flash_res_t rom_read(const flash_t *flash, uint8_t *data, uint32_t address, uint32_t len)
 {
     uint32_t romaddr;
 
@@ -348,8 +348,11 @@ flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len)
             // The 16kB of rom bank are accessed with A14 high and A[13:0] bits
             romaddr = (0x4000 | address) & 0x7FFF;
         }
-
+        #if MBC1_REVA
+        *data++ = norflash_byte_read(romaddr << 1);
+        #else
         *data++ = norflash_byte_read(romaddr);
+        #endif
         address++;
     }
 
@@ -364,7 +367,7 @@ flash_res_t rom_read(uint8_t *data, uint32_t address, uint32_t len)
  * @param len
  * @return flash_res_t
  */
-flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
+flash_res_t rom_program(const flash_t *flash, const uint8_t *data, uint32_t addr, uint32_t len)
 {
     flash_res_t res = FLASH_OK;
     uint32_t romaddr;
@@ -377,8 +380,12 @@ flash_res_t rom_program(const uint8_t *data, uint32_t addr, uint32_t len)
             rom_setBank(addr >> 14);
             romaddr = (0x4000 | addr) & 0x7FFF;
         }
-
-        flashnor_write(data, romaddr, 1);
+        #if MBC1_REVA
+        // ignore A-1 address by shifting left
+        flash->write(data, romaddr << 1, 1);
+        #else
+        flash->write(data, romaddr, 1);
+        #endif
 
         addr++;
         data++;

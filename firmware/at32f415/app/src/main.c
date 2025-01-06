@@ -367,7 +367,7 @@ static int romCmd(int argc, char **argv)
         uint8_t rom_header[GAME_HEADER_SIZE];
         if(argc == 2){
             selectFlashNOR();
-            rom_read(rom_header, GAME_HEADER_ADDR, sizeof(rom_header));
+            rom_read(pfls, rom_header, GAME_HEADER_ADDR, sizeof(rom_header));
         }else{
             selectFlashSPI();
             if(!mounted){
@@ -416,20 +416,25 @@ static int romCmd(int argc, char **argv)
 
         selectFlashNOR();
 
-        printf("\nErasing..\n");
-        printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
+        if(!pfls){
+            printf("\nNo nor flash detected\n");
+            return CLI_OK;
+        }
+
+        //printf("\nErasing..\n");
+        //printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
 
         while(1){
             if(res > 0){
                 mem_bus_configure(MEM_BUS_NOR);
 
-                if(rom_program(block, addr, PROG_BLOCK_SIZE) != FLASH_OK){
+                if(rom_program(pfls, block, addr, PROG_BLOCK_SIZE) != FLASH_OK){
                     printf("\nProgram failed at block: %lx\n", addr);
                     break;
                 }
 
                 for(int i = 0; i < PROG_BLOCK_SIZE; i++){
-                    if(rom_byte_read(addr + i) != block[i]){
+                    if(rom_byte_read(pfls, addr + i) != block[i]){
                         printf("\nFailed at address: %lx\n", addr + i);
                         fail = 1;
                         break;
@@ -482,7 +487,7 @@ static int romCmd(int argc, char **argv)
         if(addr < pfls->size && len < 512){
             uint8_t *buf = (uint8_t*)malloc(len);
             if(buf){
-                rom_read((uint8_t*)buf, addr, len);
+                rom_read(pfls, (uint8_t*)buf, addr, len);
                 printBuf((const uint8_t*)buf, len);
                 free(buf);
                 return CLI_OK_LF;
@@ -495,7 +500,7 @@ static int romCmd(int argc, char **argv)
 
         CLI_Ha2i(argv[2], &addr);
         if(addr < pfls->size){
-            uint8_t data = rom_byte_read(addr);
+            uint8_t data = rom_byte_read(pfls, addr);
             printf("%02X\n", data);
             return CLI_OK;
         }
