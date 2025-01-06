@@ -43,27 +43,31 @@
 #define NOR_DATA_WRITE(data) GPIOB->scr =  0xFF000000 | ((data) << 8);
 #define NOR_ADDRESS_OUTPUT  \
         GPIOB->cfglr = 0x22222222; \
-        GPIOA->cfglr = 0x22222222
+        GPIOA->cfglr = 0x22222222; \
+        GPIOF->cfglr = 0x22444444
 
 #define NOR_ADDRESS_INPUT  \
         GPIOB->cfglr = 0x44444444; \
-        GPIOA->cfglr = 0x44444444
+        GPIOA->cfglr = 0x44444444; \
+        GPIOF->cfglr = 0x44444444
 
 #define NOR_ADDRESS_SET(addr)  \
         GPIOB->scr =  0x00FF0000 | ((addr) & 255); \
-        GPIOA->scr =  0x00FF0000 | ((addr) >> 8)
+        GPIOA->scr =  0x00FF0000 | ((addr) >> 8); \
+        GPIOC->scr =  0x20000000 | (((addr) & (1 << 16)) >> 3); \
+        GPIOF->scr =  0x00C00000 | (((addr) & (3 << 17)) >> 11)
+
 // RDn, WRn
-#define NOR_CTRL_OUTPUT     GPIOC->cfghr = 0x22444444
+#define NOR_CTRL_OUTPUT     GPIOC->cfghr = 0x22244444
 #define NOR_CTRL_INPUT      GPIOC->cfghr = 0x44444444
-#define NOR_WR_OUTPUT       GPIOC->cfghr = 0x42444444
 #endif
 
 
 
 flash_res_t norflash_init(void);
 void norflash_deinit(void);
-uint8_t norflash_byte_read(uint16_t addr);
-void norflash_byte_write(uint16_t addr, uint8_t data);
+uint8_t norflash_byte_read(uint32_t addr);
+void norflash_byte_write(uint32_t addr, uint8_t data);
 uint8_t norflash_bus_read(void);
 void norflash_bus_write(uint8_t data);
 #endif

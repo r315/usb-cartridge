@@ -22,7 +22,8 @@
  *
  * PB7:0 -> A7:0
  * PA7:0 -> A15:8
- * TBD   -> A18:A16
+ * PC13  -> A16
+ * PF7:6 -> A18:17
  * PB15:8 <-> D7:0  // These pins are 5V tolerant
  * PC15   -> RDn
  * PC14   -> WRn
@@ -79,7 +80,7 @@ void norflash_deinit(void)
  * @param addr
  * @return uint8_t
  */
-uint8_t norflash_byte_read(uint16_t addr)
+uint8_t norflash_byte_read(uint32_t addr)
 {
     uint8_t data;
     NOR_ADDRESS_SET(addr);
@@ -95,7 +96,7 @@ uint8_t norflash_byte_read(uint16_t addr)
  * @param addr
  * @param data
  */
-void norflash_byte_write(uint16_t addr, uint8_t data)
+void norflash_byte_write(uint32_t addr, uint8_t data)
 {
     NOR_DATA_OUTPUT;
     NOR_ADDRESS_SET(addr);

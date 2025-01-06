@@ -38,8 +38,8 @@
 
 #define GAME_HEADER_SIZE    0x50
 #define GAME_HEADER_ADDR    0x100
-#define PROG_BLOCK_SIZE     0x400
-#define VERSION             "1.0.2"
+#define PROG_BLOCK_SIZE     1024
+#define VERSION             "1.0.3"
 
 typedef struct disksize_s{
 	uint32_t totalsize;
@@ -223,8 +223,8 @@ static void rom_program_execute(const char* filename, uint8_t banking)
         return;
     }
 
-    //printf("\nErasing..\n");
-    //printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
+    printf("\nErasing..\n");
+    printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
 
     if(banking)
         printGameHeader(block + GAME_HEADER_ADDR);
@@ -255,25 +255,29 @@ static void rom_program_execute(const char* filename, uint8_t banking)
 
                 if(writen != block[i]){
                     printf("\nFailed at address: %lx\n", addr + i);
-                    i = PROG_BLOCK_SIZE - 1;
+                    i = PROG_BLOCK_SIZE;
                 }
             }
 
-            if(i == PROG_BLOCK_SIZE){
+            if(i == PROG_BLOCK_SIZE + 1){
                 break;
             }
 
             addr += PROG_BLOCK_SIZE;
 
             if((progress & 0x1f) == 0){
-                putchar('\n');
+                if(progress){
+                    printf(" %lukB\n", progress);
+                }else{
+                    putchar('\n');
+                }
             }
 
             putchar('#');
             progress++;
 
         }else{
-            printf("\nDone\n");
+            printf(" %lukB\nDone\n", progress);
             break;
         }
 
