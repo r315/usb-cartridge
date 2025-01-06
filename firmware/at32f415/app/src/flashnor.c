@@ -14,7 +14,7 @@ static const flash_t *flashnor_devices[] = {
     &en29lv320,
     &mbm29f040};
 
-uint32_t flashnor_read_id(void)
+uint32_t flashnor_id_read(void)
 {
     uint32_t id;
 
@@ -44,7 +44,7 @@ const flash_t *flashnor_get(void)
     return flashnor;
 }
 
-uint32_t flashnor_getCFI(uint8_t *buf)
+uint32_t flashnor_cfi_read(uint8_t *buf)
 {
     norflash_byte_write(FLASH_CMD_CFI_ADDR, FLASH_CMD_CFI_ENTER);
 
@@ -60,23 +60,16 @@ flash_res_t flashnor_init(void)
 {
     norflash_init();
 
-    uint32_t device_id = flashnor_read_id();
-
-    flashnor = NULL;
-
     for (uint8_t i = 0; i < FLASH_DEVICES_COUNT; i++)
     {
-        if (flashnor_devices[i]->mid == device_id)
+        flashnor = flashnor_devices[i];
+        if (flashnor->mid == flashnor->id_read())
         {
-            flashnor = flashnor_devices[i];
-            break;
+            return flashnor->init();
         }
     }
 
-    if (flashnor)
-    {
-        return flashnor->init();
-    }
+    flashnor = NULL;
 
     return FLASH_ERROR;
 }
@@ -110,6 +103,7 @@ flash_res_t flashnor_write(const uint8_t *data, uint32_t address, uint32_t len)
         if(flashnor_polling(*data) != FLASH_OK){
             return FLASH_ERROR;
         }
+        data++;
     }
 
     return FLASH_OK;

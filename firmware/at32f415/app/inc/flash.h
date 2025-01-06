@@ -31,6 +31,7 @@ typedef struct {
     flash_res_t (*erase)(uint32_t sector);
     flash_res_t (*read)(uint8_t *data, uint32_t addr, uint32_t len);
     flash_res_t (*write)(const uint8_t *data, uint32_t addr, uint32_t len);
+    uint32_t (*id_read)(void);
 }flash_t;
 
 #endif

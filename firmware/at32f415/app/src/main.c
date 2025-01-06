@@ -255,7 +255,7 @@ static int flashCmd(int argc, char **argv)
         printf("usage: flash <select|init|info|erase|read>\n");
         printf("\tinit\n");
         printf("\tinfo\n");
-        printf("\terase\n");
+        printf("\terase [sector}\n");
         printf("\tformat, applies only to spi flash\n");
         printf("\tread <addr> <len>\n");
         printf("\tselect <nor|spi>\n");
@@ -288,7 +288,7 @@ static int flashCmd(int argc, char **argv)
         printf("Page size: %u (0x%02X) bytes\n",  (unsigned int)pfls->pagesize,  (unsigned int)pfls->pagesize);
 
         if(pfls->opt & FLASH_OPT_CFI){
-            uint8_t size = flashnor_getCFI((uint8_t*)argv[0]);
+            uint8_t size = flashnor_cfi_read((uint8_t*)argv[0]); // FIX, don't use argv buffer
             printf("CFI bytes:\n");
             printBuf((const uint8_t*)argv[0], size);
         }

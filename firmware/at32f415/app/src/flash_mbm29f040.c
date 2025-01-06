@@ -48,5 +48,6 @@ const flash_t mbm29f040 = {
     .init = mbm29f040_init,
     .erase = mbm29f040_erase,
     .read = flashnor_read,
-    .write = flashnor_write
+    .write = flashnor_write,
+    .id_read = flashnor_id_read
 };
