@@ -39,7 +39,7 @@
 #define GAME_HEADER_SIZE    0x50
 #define GAME_HEADER_ADDR    0x100
 #define PROG_BLOCK_SIZE     1024
-#define VERSION             "1.0.3"
+#define VERSION             "1.1.0"
 
 typedef struct disksize_s{
 	uint32_t totalsize;
