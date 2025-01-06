@@ -77,7 +77,7 @@ void mem_bus_configure(uint8_t bus)
             break;
         case MEM_BUS_NOR:
             NOR_DATA_INPUT;
-            NOR_ADDRESS_INPUT;
+            NOR_ADDRESS_OUTPUT;
             NOR_CTRL_OUTPUT;
             break;
     }
