@@ -191,6 +191,99 @@ static void selectFlashNOR(void){
     pfls = flashnor_get();
 }
 
+static void rom_program_execute(const char* filename, uint8_t banking)
+{
+    uint8_t *block;
+    uint32_t addr = 0;
+    uint32_t progress = 0;
+    int res, i = 0;
+
+    block = (uint8_t*)malloc(PROG_BLOCK_SIZE);
+
+    if(!block){
+        printf("Fail allocation\n");
+        return;
+    }
+
+    mem_bus_configure(MEM_BUS_SPI);
+
+    if(!mounted)
+        mount("0:", 1);
+
+    if(readBlockFromFile(block, PROG_BLOCK_SIZE, filename, 0) <= 0){
+        free(block);
+        return;
+    }
+
+    selectFlashNOR();
+
+    if(!pfls){
+        printf("\nNo nor flash detected\n");
+        free(block);
+        return;
+    }
+
+    //printf("\nErasing..\n");
+    //printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
+
+    if(banking)
+        printGameHeader(block + GAME_HEADER_ADDR);
+
+    while(1){
+        if(res > 0){
+            mem_bus_configure(MEM_BUS_NOR);
+
+            if(banking){
+                res = rom_program(pfls, block, addr, PROG_BLOCK_SIZE);
+            }else{
+                res = pfls->write(block, addr, PROG_BLOCK_SIZE);
+            }
+
+            if(res != FLASH_OK){
+                printf("\nProgram failed at block: %lx\n", addr);
+                break;
+            }
+
+            for(i = 0; i < PROG_BLOCK_SIZE; i++){
+                uint8_t writen;
+
+                if(banking){
+                    writen = rom_byte_read(pfls, addr + i);
+                }else{
+                    writen = norflash_byte_read(addr + i);
+                }
+
+                if(writen != block[i]){
+                    printf("\nFailed at address: %lx\n", addr + i);
+                    i = PROG_BLOCK_SIZE - 1;
+                }
+            }
+
+            if(i == PROG_BLOCK_SIZE){
+                break;
+            }
+
+            addr += PROG_BLOCK_SIZE;
+
+            if((progress & 0x1f) == 0){
+                putchar('\n');
+            }
+
+            putchar('#');
+            progress++;
+
+        }else{
+            printf("\nDone\n");
+            break;
+        }
+
+        mem_bus_configure(MEM_BUS_SPI);
+        res = readBlockFromFile(block, PROG_BLOCK_SIZE, filename, addr);
+    }
+
+    free(block);
+}
+
 static int listCmd(int argc, char **argv)
 {
     FRESULT res;
@@ -396,80 +489,16 @@ static int romCmd(int argc, char **argv)
     }
 
     if(!strcmp(argv[1], "program")) {
-        uint8_t *block = (uint8_t*)malloc(PROG_BLOCK_SIZE);
-        uint32_t addr = 0;
-        uint32_t progress = 0;
-        uint8_t fail = 0;
 
-        if(!block){
-            printf("Fail allocation\n");
-            return CLI_OK;
-        }
-
-        mem_bus_configure(MEM_BUS_SPI);
-
-        if(!mounted)
-            mount("0:", 1);
-
-        int res = readBlockFromFile(block, PROG_BLOCK_SIZE, argv[2], addr);
-
-        if(res <= 0){
-            free(block);
-            return CLI_BAD_PARAM;
-        }
-
-        printGameHeader(block + GAME_HEADER_ADDR);
-
-        selectFlashNOR();
-
-        if(!pfls){
-            printf("\nNo nor flash detected\n");
-            return CLI_OK;
-        }
-
-        printf("\nErasing..\n");
-        printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
-
-        while(1){
-            if(res > 0){
-                mem_bus_configure(MEM_BUS_NOR);
-
-                if(rom_program(pfls, block, addr, PROG_BLOCK_SIZE) != FLASH_OK){
-                    printf("\nProgram failed at block: %lx\n", addr);
-                    break;
-                }
-
-                for(int i = 0; i < PROG_BLOCK_SIZE; i++){
-                    if(rom_byte_read(pfls, addr + i) != block[i]){
-                        printf("\nFailed at address: %lx\n", addr + i);
-                        fail = 1;
-                        break;
-                    }
-                }
-
-                if(fail){
-                    break;
-                }
-
-                addr += PROG_BLOCK_SIZE;
-
-                if((progress & 0x1f) == 0){
-                    putchar('\n');
-                }
-
-                putchar('#');
-                progress++;
-
-            }else{
-                printf("\nDone\n");
-                break;
+        if(argv[3]){
+            if(!strcmp(argv[3], "no_bank")) {
+                rom_program_execute(argv[2], 0);
+                return CLI_OK;
             }
-
-            mem_bus_configure(MEM_BUS_SPI);
-            res = readBlockFromFile(block, PROG_BLOCK_SIZE, argv[2], addr);
         }
 
-        free(block);
+        rom_program_execute(argv[2], 1);
+
         return CLI_OK;
     }
 
