@@ -38,7 +38,12 @@ void board_init(void)
     crm_periph_clock_enable(CRM_GPIOF_PERIPH_CLOCK, TRUE);
     LSB_NOR_LOW;                // Set pin A-1 to low
     GPIOF->cfglr = 0x24444444;  // PF7 as output push-pull
+    // Same for WRn signal
+    crm_periph_clock_enable(CRM_GPIOC_PERIPH_CLOCK, TRUE);
+    WR_NOR_HIGH;
+    NOR_WR_OUTPUT;
 #endif
+
     LED1_INIT;
     SystemInit();
     system_clock_config();
@@ -308,6 +313,10 @@ void rom_setBank(uint8_t bank)
     NOR_DATA_OUTPUT;
     NOR_ADDRESS_SET(ROM_ADDR_BANK_SELL);
     NOR_DATA_WRITE(bank & 0x0F);
+    delay_us(10);
+    WR_PAL_LOW;
+    delay_us(10);
+    WR_PAL_HIGH;
     NOR_DATA_INPUT;
 }
 
