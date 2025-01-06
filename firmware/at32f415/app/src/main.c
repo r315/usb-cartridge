@@ -39,7 +39,7 @@
 #define GAME_HEADER_SIZE    0x50
 #define GAME_HEADER_ADDR    0x100
 #define PROG_BLOCK_SIZE     0x400
-
+#define VERSION             "1.0.2"
 
 typedef struct disksize_s{
 	uint32_t totalsize;
@@ -247,6 +247,12 @@ static int resetCmd(int argc, char **argv)
     return CLI_OK;
 }
 
+static int versionCmd(int argc, char **argv)
+{
+    printf("%s\n", VERSION);
+    return CLI_OK;
+}
+
 static int flashCmd(int argc, char **argv)
 {
     flash_res_t res;
@@ -421,8 +427,8 @@ static int romCmd(int argc, char **argv)
             return CLI_OK;
         }
 
-        //printf("\nErasing..\n");
-        //printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
+        printf("\nErasing..\n");
+        printf("%s\n", (pfls->erase(FLASH_CHIP_ERASE) == FLASH_OK) ? "ok" : "fail");
 
         while(1){
             if(res > 0){
@@ -520,7 +526,8 @@ cli_command_t cli_cmds [] = {
     {"rom", romCmd},
     {"mount", mountCmd},
     {"list", listCmd},
-    {"flash", flashCmd}
+    {"flash", flashCmd},
+    {"ver", versionCmd}
 };
 
 /**
