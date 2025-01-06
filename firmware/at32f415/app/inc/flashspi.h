@@ -13,6 +13,8 @@
 #define FLASH_SPI_CMD_RDID      0x9F  /*!< Read ID (JEDEC Manufacturer ID and JEDEC CFI) */
 #define FLASH_SPI_CMD_CE        0xC7  /*!< Chip Erase */
 
+#define FLASH_SPI_SR_BSY        1
+
 flash_res_t flashspi_init(void);
 flash_res_t flashspi_write(const uint8_t* pbuffer, uint32_t writeaddr, uint32_t numbytetowrite);
 flash_res_t flashspi_read(uint8_t* pbuffer, uint32_t readaddr, uint32_t numbytetoread);
@@ -26,4 +28,5 @@ flash_res_t flashspi_erase(void);
 void flashspi_erasesector (uint32_t sector);
 uint32_t flashspi_read_id_jedec(void);
 uint8_t flashspi_read_status(void);
+flash_res_t flashspi_write_end_wait (uint32_t);
 #endif

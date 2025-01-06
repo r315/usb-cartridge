@@ -24,25 +24,26 @@ static void spiflash_cfgPins(void)
    /*Deselect FLASH*/
    spiflash_cs (CS_HIGH);
 
-   /*Configure SPI SCK pin*/
    GPIO_InitStructure.gpio_out_type       = GPIO_OUTPUT_PUSH_PULL;
-   GPIO_InitStructure.gpio_mode           = GPIO_MODE_MUX;
    GPIO_InitStructure.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+   GPIO_InitStructure.gpio_pins           = FLASH_SPI_CS_PIN;
+    /*Configure SPI CS pin*/
+   GPIO_InitStructure.gpio_mode           = GPIO_MODE_OUTPUT;
+   gpio_init (FLASH_SPI_CS_GPIO, &GPIO_InitStructure);
+   /*Configure SPI SCK pin*/
+   GPIO_InitStructure.gpio_mode           = GPIO_MODE_MUX;
    GPIO_InitStructure.gpio_pins           = FLASH_SPI_SCK_PIN;
    gpio_init (FLASH_SPI_SCK_GPIO, &GPIO_InitStructure);
 
-   /*Configure SPI MISO pin*/
-   GPIO_InitStructure.gpio_pins = FLASH_SPI_MISO_PIN;
-   gpio_init (FLASH_SPI_MISO_GPIO, &GPIO_InitStructure);
-
    /*Configure SPI MOSI pin*/
-   GPIO_InitStructure.gpio_pins = FLASH_SPI_MOSI_PIN;
+   GPIO_InitStructure.gpio_pins           = FLASH_SPI_MOSI_PIN;
    gpio_init (FLASH_SPI_MOSI_GPIO, &GPIO_InitStructure);
 
-   /*Configure SPI CS pin*/
-   GPIO_InitStructure.gpio_pins = FLASH_SPI_CS_PIN;
-   GPIO_InitStructure.gpio_mode = GPIO_MODE_OUTPUT;
-   gpio_init (FLASH_SPI_CS_GPIO, &GPIO_InitStructure);
+   /*Configure SPI MISO pin*/
+   GPIO_InitStructure.gpio_mode           = GPIO_MODE_INPUT;
+   GPIO_InitStructure.gpio_pull           = GPIO_PULL_UP;
+   GPIO_InitStructure.gpio_pins           = FLASH_SPI_MISO_PIN;
+   gpio_init (FLASH_SPI_MISO_GPIO, &GPIO_InitStructure);
 }
 
 /**

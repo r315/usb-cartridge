@@ -3,9 +3,9 @@
 #include "flashspi.h"
 
 #define FLASH_DEVICES_COUNT sizeof (flashspi_devices) / sizeof (flash_t *)
+#define FLASH_SPI_TIMEOUT       30000UL
 
 static uint32_t flashspi_read_id (void);
-static void flashspi_waitforwriteend (void);
 static void flashspi_writepage (const uint8_t *pbuffer, uint32_t writeaddr, uint16_t numbytetowrite);
 static void flashspi_writebuffer (const uint8_t *pbuffer, uint32_t writeaddr, uint16_t numbytetowrite);
 
@@ -14,6 +14,7 @@ extern const flash_t w25q64;
 extern const flash_t w25q128;
 extern const flash_t w25x32;
 extern const flash_t mx25l1635;
+extern const flash_t at25sf321b;
 
 static const flash_t *spiflash;
 static const flash_t *flashspi_devices[] = {
@@ -21,7 +22,8 @@ static const flash_t *flashspi_devices[] = {
     &w25q64,
     &w25q128,
     &w25x32,
-    &mx25l1635
+    &mx25l1635,
+    &at25sf321b
 };
 
 /**
@@ -351,7 +353,7 @@ static void flashspi_writepage (const uint8_t *pbuffer, uint32_t writeaddr,
    spiflash_cs (CS_HIGH);
 
    /*!< wait the end of flash writing */
-   flashspi_waitforwriteend ();
+   flashspi_write_end_wait (FLASH_SPI_TIMEOUT);
 }
 
 /**
@@ -377,27 +379,29 @@ void flashspi_writeenable (void)
  * @param  None
  * @retval None
  */
-static void flashspi_waitforwriteend (void)
+flash_res_t flashspi_write_end_wait (uint32_t timeout)
 {
-   uint8_t flashstatus = 0;
+    uint32_t time;
+    flash_res_t res = FLASH_ERROR_TIMEOUT;
 
-   /*!< Select the FLASH: Chip Select low */
-   spiflash_cs (CS_LOW);
+    time = get_tick();
 
-   /*!< Send "Read Status Register" instruction */
-   spiflash_sendbyte (FLASH_SPI_CMD_RDSR);
+    spiflash_cs (CS_LOW);
 
-   /*!< Loop as long as the memory is busy with a write cycle */
-   do
-   {
-      /*!< Send a dummy byte to generate the clock needed by the FLASH
-       and put the value of the status register in FLASH_Status variable */
-      flashstatus = spiflash_sendbyte (FLASH_DUMMY_BYTE);
+    spiflash_sendbyte (FLASH_SPI_CMD_RDSR);
 
-   } while ((flashstatus & 0x1) != 0); /* Write in progress */
+    /*!< Loop as long as the memory is busy with a write cycle */
+    do{
+        uint8_t flashstatus = spiflash_sendbyte (FLASH_DUMMY_BYTE);
+        if(!(flashstatus & FLASH_SPI_SR_BSY)){
+            res = FLASH_OK;
+            break;
+        }
+   } while (get_tick() - time < timeout); /* Write in progress */
 
-   /*!< Deselect the FLASH: Chip Select high */
    spiflash_cs (CS_HIGH);
+
+   return res;
 }
 
 /**
@@ -428,5 +432,5 @@ void flashspi_erasesector (uint32_t sector)
    spiflash_cs (CS_HIGH);
 
    /*!< wait the end of flash writing */
-   flashspi_waitforwriteend ();
+   flashspi_write_end_wait (FLASH_SPI_TIMEOUT);
 }
