@@ -7,9 +7,11 @@
 #include "syscalls.h"
 #include "flashnor.h"
 
-#define ROM_ADDR_BANK_SELL      0x2000
-#define ROM_ADDR_BANK_SELH      0x4000
-#define ROM_ADDR_MODE_SEL       0x6000
+#define ROM_BANK_SELL_ADDR      0x2000
+#define ROM_BANK_SELH_ADDR      0x4000
+#define ROM_MODE_SEL_ADDR       0x6000
+
+#define ROM_BANK_ADDR           0x4000
 
 static otg_core_type otg_core_struct;
 static uint8_t serial_buf[USBD_CDC_MSC_OUT_MAXPACKET_SIZE];
@@ -308,16 +310,34 @@ uint8_t isInserted(void)
  */
 void rom_setBank(uint8_t bank)
 {
-    WR_NOR_HIGH;
-    RD_NOR_HIGH;
     NOR_DATA_OUTPUT;
-    NOR_ADDRESS_SET(ROM_ADDR_BANK_SELL);
+    #if MBC1_REVA
+    NOR_ADDRESS_SET(ROM_BANK_SELL_ADDR << 1);
+    #else
+    NOR_ADDRESS_SET(ROM_BANK_SELL_ADDR);
+    #endif
     NOR_DATA_WRITE(bank & 0x0F);
     delay_us(10);
     WR_PAL_LOW;
     delay_us(10);
     WR_PAL_HIGH;
     NOR_DATA_INPUT;
+}
+
+uint32_t rom_address_set(uint32_t address)
+{
+    uint32_t romaddr;
+    // Select bank
+    if(address < ROM_BANK_ADDR){
+        rom_setBank(0);
+        romaddr = address;
+    }else{
+        // Accessing rom bank, use MA[17:14] bits as bank select
+        rom_setBank(address >> 14);
+        // The 16kB of rom bank are accessed with A14 high and A[13:0] bits
+        romaddr = (ROM_BANK_ADDR | address) & 0x7FFF;
+    }
+    return romaddr;
 }
 
 /**
@@ -347,22 +367,15 @@ flash_res_t rom_read(const flash_t *flash, uint8_t *data, uint32_t address, uint
     uint32_t romaddr;
 
     while(len--){
-        // Select bank
-        if(address < 0x4000){
-            rom_setBank(0);
-            romaddr = address;
-        }else{
-            // Accessing rom bank, use A[17:14] bits as bank select
-            rom_setBank(address >> 14);
-            // The 16kB of rom bank are accessed with A14 high and A[13:0] bits
-            romaddr = (0x4000 | address) & 0x7FFF;
-        }
+        romaddr = rom_address_set(address);
         #if MBC1_REVA
-        *data++ = norflash_byte_read(romaddr << 1);
+        // ignore A-1 address by shifting left
+        *data = norflash_byte_read(romaddr << 1);
         #else
-        *data++ = norflash_byte_read(romaddr);
+        *data = norflash_byte_read(romaddr);
         #endif
         address++;
+        data++;
     }
 
     return FLASH_OK;
@@ -376,27 +389,19 @@ flash_res_t rom_read(const flash_t *flash, uint8_t *data, uint32_t address, uint
  * @param len
  * @return flash_res_t
  */
-flash_res_t rom_program(const flash_t *flash, const uint8_t *data, uint32_t addr, uint32_t len)
+flash_res_t rom_program(const flash_t *flash, const uint8_t *data, uint32_t address, uint32_t len)
 {
     flash_res_t res = FLASH_OK;
     uint32_t romaddr;
 
     while(len--){
-        if(addr < 0x4000){
-            rom_setBank(0);
-            romaddr = addr;
-        }else{
-            rom_setBank(addr >> 14);
-            romaddr = (0x4000 | addr) & 0x7FFF;
-        }
+        romaddr = rom_address_set(address);
         #if MBC1_REVA
-        // ignore A-1 address by shifting left
         flash->write(data, romaddr << 1, 1);
         #else
         flash->write(data, romaddr, 1);
         #endif
-
-        addr++;
+        address++;
         data++;
     }
 

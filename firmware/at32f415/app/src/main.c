@@ -467,6 +467,11 @@ static int romCmd(int argc, char **argv)
         return CLI_OK;
     }
 
+    /**
+     * @brief Set rom bank
+     * MA17:14 only change
+     * on rom adresses above 0x4000
+     */
     if(!strcmp(argv[1], "bank")) {
         uint32_t bank;
         CLI_Ia2i(argv[2], (int32_t*)&bank);
